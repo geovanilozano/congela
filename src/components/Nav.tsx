@@ -7,6 +7,8 @@ const links = [
   { href: "/fondos", label: "Fondos", icon: "🪙" },
   { href: "/ventas", label: "Ventas", icon: "🧾" },
   { href: "/caja", label: "Cierre de caja", icon: "🔒" },
+  { href: "/energia", label: "Energía", icon: "⚡" },
+  { href: "/servicios", label: "Servicios", icon: "🔌" },
 ];
 
 export default function Nav() {

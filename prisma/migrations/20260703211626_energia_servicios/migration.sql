@@ -1,0 +1,36 @@
+-- CreateTable
+CREATE TABLE "EnergiaGeneracion" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "fecha" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "kwh" REAL NOT NULL,
+    "fuente" TEXT NOT NULL DEFAULT 'manual',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "MedidorLectura" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "fecha" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "kwh" REAL NOT NULL,
+    "fuente" TEXT NOT NULL DEFAULT 'manual',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "ReciboServicio" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "tipo" TEXT NOT NULL,
+    "periodoInicio" DATETIME,
+    "periodoFin" DATETIME,
+    "consumo" REAL,
+    "valorCents" INTEGER NOT NULL,
+    "fotoUrl" TEXT,
+    "fecha" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "Ajuste" (
+    "clave" TEXT NOT NULL PRIMARY KEY,
+    "valor" TEXT NOT NULL
+);

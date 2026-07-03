@@ -145,3 +145,40 @@ model CierreCaja {
   movimientos  MovimientoFondo[]
   createdAt    DateTime          @default(now())
 }
+
+// ---------------------------------------------------------------------------
+// Energía y servicios
+// ---------------------------------------------------------------------------
+model EnergiaGeneracion {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  kwh       Float // energía generada por los paneles ese día
+  fuente    String   @default("manual") // "manual" | "api"
+  createdAt DateTime @default(now())
+}
+
+model MedidorLectura {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  kwh       Float // consumo de la empresa ese día
+  fuente    String   @default("manual") // "manual" | "api"
+  createdAt DateTime @default(now())
+}
+
+model ReciboServicio {
+  id            Int      @id @default(autoincrement())
+  tipo          String // "energia" | "agua" | "gas" | "internet"
+  periodoInicio DateTime?
+  periodoFin    DateTime?
+  consumo       Float? // kWh, m3, etc. (según el servicio)
+  valorCents    Int
+  fotoUrl       String?
+  fecha         DateTime @default(now())
+  createdAt     DateTime @default(now())
+}
+
+// Ajustes clave/valor del sistema (ej. precio del kWh).
+model Ajuste {
+  clave String @id
+  valor String
+}

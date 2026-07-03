@@ -46,3 +46,7 @@ next-env.d.ts
 *.db
 *.db-journal
 prisma/dev.db*
+
+# fotos de recibos/facturas subidas (local)
+/public/uploads/*
+!/public/uploads/.gitkeep

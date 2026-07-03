@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
+import { balanceEnergia } from "@/lib/finance/energia";
+import { getAjusteNumero } from "@/lib/ajustes";
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
 
 export const dynamic = "force-dynamic";
@@ -9,12 +11,21 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos] = await Promise.all([
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
     db.fondo.findMany({ include: { regla: true, movimientos: true } }),
+    db.energiaGeneracion.findMany(),
+    db.medidorLectura.findMany(),
+    getAjusteNumero("precioKwhCents", 0),
   ]);
+
+  const balEnergia = balanceEnergia({
+    generacionKwh: generaciones.reduce((a, g) => a + g.kwh, 0),
+    consumoKwh: consumos.reduce((a, c) => a + c.kwh, 0),
+    precioKwhCents,
+  });
 
   const totalInvertido = inversiones.reduce((a, i) => a + i.valorCents, 0);
   const ingresosTotales = cierres.reduce((a, c) => a + c.totalCents, 0);
@@ -46,11 +57,12 @@ export default async function Home() {
         <p className="mt-1 text-sm text-slate-500">Resumen financiero del negocio de hielo.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
         <Kpi label="Saldo del crédito" valor={formatMoney(saldoCredito)} color="text-amber-600" extra={`${avance}% pagado`} />
         <Kpi label="Ingresos (cierres)" valor={formatMoney(ingresosTotales)} color="text-sky-700" />
         <Kpi label="Utilidad acumulada" valor={formatMoney(utilidad)} color="text-emerald-600" />
+        <Kpi label="Ahorro solar" valor={formatMoney(balEnergia.ahorroCents)} color="text-amber-500" extra={`${balEnergia.porcentajeSolar}% con paneles`} />
       </div>
 
       {cuotaActiva > 0 && (
