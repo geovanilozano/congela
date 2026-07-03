@@ -154,10 +154,10 @@ Así **"todo sale de ahí"**: ningún gasto fijo depende de plata externa.
 - [ ] Tablero financiero básico (ingresos, gastos, utilidad, saldo del crédito)
 
 ### Fase 2 — Energía y servicios
-- [ ] Carga manual de **generación solar** y **consumo del medidor**
-- [ ] Módulo de **recibos** (energía, agua, gas, internet) con foto
-- [ ] Cálculo de **ahorro solar** y comparación generación vs consumo vs red
-- [ ] **Conexión automática** a la API del inversor (según marca confirmada)
+- [x] Carga manual de **generación solar** y **consumo del medidor**
+- [x] Módulo de **recibos** (energía, agua, gas, internet) con foto
+- [x] Cálculo de **ahorro solar** y comparación generación vs consumo vs red
+- [ ] **Conexión automática** a la API del inversor (según marca confirmada) ← pendiente marca
 
 ### Fase 3 — Operación
 - [ ] **Producción de hielo** (por día/turno/cubetero)
