@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const links = [
   { href: "/", label: "Tablero", icon: "📊" },
+  { href: "/reportes", label: "Reportes", icon: "📈" },
   { href: "/inversion", label: "Inversión", icon: "🏗️" },
   { href: "/credito", label: "Crédito", icon: "💳" },
   { href: "/fondos", label: "Fondos", icon: "🪙" },
