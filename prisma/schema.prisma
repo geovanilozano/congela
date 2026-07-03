@@ -1,7 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Modelo de datos — núcleo financiero de Congela.
+// Todos los montos se guardan en CENTAVOS (Int) para evitar errores de redondeo.
+// SQLite no soporta enums: los campos "tipo/estado" se guardan como String.
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +9,139 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+// ---------------------------------------------------------------------------
+// Inversión inicial
+// ---------------------------------------------------------------------------
+model Inversion {
+  id          Int      @id @default(autoincrement())
+  descripcion String
+  proveedor   String?
+  valorCents  Int
+  fecha       DateTime @default(now())
+  formaPago   String   @default("credito") // "contado" | "credito"
+  fotoUrl     String?
+  creditoId   Int?
+  credito     Credito? @relation(fields: [creditoId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Crédito de la inversión + amortización
+// ---------------------------------------------------------------------------
+model Credito {
+  id            Int                  @id @default(autoincrement())
+  entidad       String?
+  montoCents    Int
+  tasaMensual   Float // 0.02 = 2% mensual
+  numCuotas     Int
+  fechaInicio   DateTime             @default(now())
+  periodicidad  String               @default("mensual")
+  estado        String               @default("activo") // "activo" | "pagado"
+  cuotas        CuotaAmortizacion[]
+  pagos         PagoCredito[]
+  inversiones   Inversion[]
+  createdAt     DateTime             @default(now())
+}
+
+model CuotaAmortizacion {
+  id              Int          @id @default(autoincrement())
+  creditoId       Int
+  credito         Credito      @relation(fields: [creditoId], references: [id], onDelete: Cascade)
+  numero          Int
+  fechaVencimiento DateTime
+  cuotaCents      Int
+  capitalCents    Int
+  interesCents    Int
+  saldoCents      Int
+  estado          String       @default("pendiente") // "pendiente" | "pagada" | "vencida"
+  pago            PagoCredito?
+}
+
+model PagoCredito {
+  id         Int                @id @default(autoincrement())
+  creditoId  Int
+  credito    Credito            @relation(fields: [creditoId], references: [id], onDelete: Cascade)
+  cuotaId    Int?               @unique
+  cuota      CuotaAmortizacion? @relation(fields: [cuotaId], references: [id])
+  valorCents Int
+  fecha      DateTime           @default(now())
+  comprobanteUrl String?
+}
+
+// ---------------------------------------------------------------------------
+// Distribución del dinero (fondos / "bolsillos")
+// ---------------------------------------------------------------------------
+model Fondo {
+  id           Int               @id @default(autoincrement())
+  nombre       String            @unique
+  regla        ReglaReparto?
+  movimientos  MovimientoFondo[]
+}
+
+model ReglaReparto {
+  id         Int    @id @default(autoincrement())
+  fondoId    Int    @unique
+  fondo      Fondo  @relation(fields: [fondoId], references: [id], onDelete: Cascade)
+  tipo       String // "fijo" | "porcentaje" | "resto"
+  valorCents Int?   // para "fijo"
+  valor      Float? // para "porcentaje" (0.1 = 10%)
+  prioridad  Int    @default(10)
+  activo     Boolean @default(true)
+}
+
+model MovimientoFondo {
+  id          Int         @id @default(autoincrement())
+  fondoId     Int
+  fondo       Fondo       @relation(fields: [fondoId], references: [id], onDelete: Cascade)
+  montoCents  Int // positivo entra, negativo sale
+  concepto    String
+  fecha       DateTime    @default(now())
+  cierreId    Int?
+  cierre      CierreCaja? @relation(fields: [cierreId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Ventas y cierre de caja
+// ---------------------------------------------------------------------------
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  telefono  String?
+  tipo      String   @default("contado") // "contado" | "credito"
+  ventas    Venta[]
+  createdAt DateTime @default(now())
+}
+
+model Venta {
+  id         Int         @id @default(autoincrement())
+  clienteId  Int?
+  cliente    Cliente?    @relation(fields: [clienteId], references: [id])
+  fecha      DateTime    @default(now())
+  totalCents Int
+  formaPago  String      @default("contado") // "contado" | "credito"
+  fotoUrl    String?
+  items      VentaItem[]
+  cierreId   Int?
+  cierre     CierreCaja? @relation(fields: [cierreId], references: [id])
+}
+
+model VentaItem {
+  id             Int    @id @default(autoincrement())
+  ventaId        Int
+  venta          Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  descripcion    String
+  cantidad       Int
+  precioUnitCents Int
+  subtotalCents  Int
+}
+
+model CierreCaja {
+  id           Int               @id @default(autoincrement())
+  fecha        DateTime          @default(now())
+  totalCents   Int
+  ventas       Venta[]
+  movimientos  MovimientoFondo[]
+  createdAt    DateTime          @default(now())
 }
