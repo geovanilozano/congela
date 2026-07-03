@@ -196,24 +196,27 @@ model Activo {
   costoCents    Int          @default(0)
   fechaCompra   DateTime?
   garantiaHasta DateTime?
-  estado        String       @default("activo") // activo, mantenimiento, dañado, baja
-  ubicacion     String?
-  producciones  Produccion[]
-  createdAt     DateTime     @default(now())
+  estado         String          @default("activo") // activo, mantenimiento, dañado, baja
+  ubicacion      String?
+  producciones   Produccion[]
+  mantenimientos Mantenimiento[]
+  createdAt      DateTime        @default(now())
 }
 
 model Produccion {
-  id        Int      @id @default(autoincrement())
-  fecha     DateTime @default(now())
-  turno     String? // mañana, tarde, noche
-  tipo      String   @default("cubo") // cubo, picado
-  bolsas    Int      @default(0)
-  kilos     Float?
-  perdidas  Int      @default(0)
-  activoId  Int?
-  activo    Activo?  @relation(fields: [activoId], references: [id])
-  nota      String?
-  createdAt DateTime @default(now())
+  id         Int       @id @default(autoincrement())
+  fecha      DateTime  @default(now())
+  turno      String? // mañana, tarde, noche
+  tipo       String    @default("cubo") // cubo, picado
+  bolsas     Int       @default(0)
+  kilos      Float?
+  perdidas   Int       @default(0)
+  activoId   Int?
+  activo     Activo?   @relation(fields: [activoId], references: [id])
+  empleadoId Int?
+  empleado   Empleado? @relation(fields: [empleadoId], references: [id])
+  nota       String?
+  createdAt  DateTime  @default(now())
 }
 
 model InsumoInventario {
@@ -244,4 +247,55 @@ model CompraGasto {
   fecha       DateTime @default(now())
   fotoUrl     String?
   createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Personal y mantenimiento
+// ---------------------------------------------------------------------------
+model Empleado {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  cargo         String?
+  telefono      String?
+  salarioCents  Int           @default(0)
+  fechaIngreso  DateTime?
+  activo        Boolean       @default(true)
+  asistencias   Asistencia[]
+  pagos         PagoNomina[]
+  producciones  Produccion[]
+  createdAt     DateTime      @default(now())
+}
+
+model Asistencia {
+  id         Int      @id @default(autoincrement())
+  empleadoId Int
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  fecha      DateTime @default(now())
+  turno      String?
+  estado     String   @default("presente") // presente | ausente | tarde
+  horas      Float?
+}
+
+model PagoNomina {
+  id             Int      @id @default(autoincrement())
+  empleadoId     Int
+  empleado       Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  fecha          DateTime @default(now())
+  valorCents     Int
+  concepto       String   @default("Salario")
+  comprobanteUrl String?
+}
+
+model Mantenimiento {
+  id              Int       @id @default(autoincrement())
+  activoId        Int?
+  activo          Activo?   @relation(fields: [activoId], references: [id])
+  tipo            String    @default("preventivo") // preventivo | correctivo
+  descripcion     String
+  fechaProgramada DateTime
+  fechaRealizada  DateTime?
+  costoCents      Int       @default(0)
+  estado          String    @default("programado") // programado | realizado
+  nota            String?
+  createdAt       DateTime  @default(now())
 }

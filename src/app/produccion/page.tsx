@@ -8,9 +8,10 @@ function fmtFecha(d: Date) {
 }
 
 export default async function ProduccionPage() {
-  const [registros, activos] = await Promise.all([
-    db.produccion.findMany({ include: { activo: true }, orderBy: { fecha: "desc" } }),
+  const [registros, activos, empleados] = await Promise.all([
+    db.produccion.findMany({ include: { activo: true, empleado: true }, orderBy: { fecha: "desc" } }),
     db.activo.findMany({ where: { tipo: "cubetero" }, orderBy: { nombre: "asc" } }),
+    db.empleado.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
   ]);
 
   const totalBolsas = registros.reduce((a, r) => a + r.bolsas, 0);
@@ -66,6 +67,13 @@ export default async function ProduccionPage() {
           </select>
         </label>
         <label className="text-sm">
+          <span className="text-slate-500">Empleado</span>
+          <select name="empleadoId" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="">—</option>
+            {empleados.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">
           <span className="text-slate-500">Bolsas producidas</span>
           <input name="bolsas" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
@@ -94,19 +102,21 @@ export default async function ProduccionPage() {
               <th>Turno</th>
               <th>Tipo</th>
               <th>Cubetero</th>
+              <th>Empleado</th>
               <th className="text-right">Bolsas</th>
               <th className="text-right">Pérdidas</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {registros.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin producción registrada.</td></tr>}
+            {registros.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-slate-400">Sin producción registrada.</td></tr>}
             {registros.map((r) => (
               <tr key={r.id} className="border-t border-slate-100">
                 <td className="p-3 text-slate-500">{fmtFecha(r.fecha)}</td>
                 <td className="text-slate-500">{r.turno || "—"}</td>
                 <td className="text-slate-600">{r.tipo}</td>
                 <td className="text-slate-500">{r.activo?.nombre || "—"}</td>
+                <td className="text-slate-500">{r.empleado?.nombre || "—"}</td>
                 <td className="text-right font-medium text-sky-700">{r.bolsas}</td>
                 <td className="text-right text-red-600">{r.perdidas || 0}</td>
                 <td className="pr-3 text-right">

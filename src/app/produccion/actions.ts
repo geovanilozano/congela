@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function crearProduccion(formData: FormData) {
   const bolsas = Number(formData.get("bolsas")) || 0;
   const activoRaw = formData.get("activoId");
+  const empleadoRaw = formData.get("empleadoId");
   await db.produccion.create({
     data: {
       fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
@@ -15,6 +16,7 @@ export async function crearProduccion(formData: FormData) {
       kilos: formData.get("kilos") ? Number(formData.get("kilos")) : null,
       perdidas: Number(formData.get("perdidas")) || 0,
       activoId: activoRaw ? Number(activoRaw) || null : null,
+      empleadoId: empleadoRaw ? Number(empleadoRaw) || null : null,
       nota: String(formData.get("nota") || "") || null,
     },
   });

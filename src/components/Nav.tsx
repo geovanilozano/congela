@@ -11,6 +11,8 @@ const links = [
   { href: "/produccion", label: "Producción", icon: "🏭" },
   { href: "/inventario", label: "Inventario", icon: "📦" },
   { href: "/activos", label: "Activos", icon: "🧰" },
+  { href: "/personal", label: "Personal", icon: "👷" },
+  { href: "/mantenimiento", label: "Mantenimiento", icon: "🛠️" },
   { href: "/energia", label: "Energía", icon: "⚡" },
   { href: "/servicios", label: "Servicios", icon: "🔌" },
 ];
