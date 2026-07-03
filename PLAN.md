@@ -165,9 +165,9 @@ Así **"todo sale de ahí"**: ningún gasto fijo depende de plata externa.
 - [x] **Compras y gastos** con comprobante (foto)
 - [x] **Activos y equipos**
 
-### Fase 4 — Personas y mantenimiento
-- [ ] **Personal** (turnos, asistencia, pagos, producción por empleado)
-- [ ] **Mantenimiento** (preventivo/correctivo + recordatorios)
+### Fase 4 — Personas y mantenimiento ✅
+- [x] **Personal** (asistencia, pagos, producción por empleado)
+- [x] **Mantenimiento** (preventivo/correctivo + alertas + costo a gastos)
 
 ### Fase 5 — Reportes y extras
 - [ ] Tablero de **KPIs** completo y gráficos
