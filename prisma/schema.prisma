@@ -182,3 +182,66 @@ model Ajuste {
   clave String @id
   valor String
 }
+
+// ---------------------------------------------------------------------------
+// Operación: activos, producción, inventario, compras/gastos
+// ---------------------------------------------------------------------------
+model Activo {
+  id            Int          @id @default(autoincrement())
+  nombre        String
+  tipo          String       @default("otro") // cubetero, refrigerador, panel, inversor, medidor, picadora, otro
+  marca         String?
+  capacidad     String?
+  consumoKwh    Float?
+  costoCents    Int          @default(0)
+  fechaCompra   DateTime?
+  garantiaHasta DateTime?
+  estado        String       @default("activo") // activo, mantenimiento, dañado, baja
+  ubicacion     String?
+  producciones  Produccion[]
+  createdAt     DateTime     @default(now())
+}
+
+model Produccion {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  turno     String? // mañana, tarde, noche
+  tipo      String   @default("cubo") // cubo, picado
+  bolsas    Int      @default(0)
+  kilos     Float?
+  perdidas  Int      @default(0)
+  activoId  Int?
+  activo    Activo?  @relation(fields: [activoId], references: [id])
+  nota      String?
+  createdAt DateTime @default(now())
+}
+
+model InsumoInventario {
+  id          Int                    @id @default(autoincrement())
+  nombre      String                 @unique
+  unidad      String                 @default("unidad") // unidad, bolsa, kg, litro
+  stock       Float                  @default(0)
+  stockMinimo Float                  @default(0)
+  movimientos MovimientoInventario[]
+  createdAt   DateTime               @default(now())
+}
+
+model MovimientoInventario {
+  id        Int              @id @default(autoincrement())
+  insumoId  Int
+  insumo    InsumoInventario @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  cantidad  Float // + entrada, - salida
+  concepto  String
+  fecha     DateTime         @default(now())
+}
+
+model CompraGasto {
+  id          Int      @id @default(autoincrement())
+  categoria   String // bolsas, mantenimiento, nomina, transporte, arriendo, servicios, reparaciones, impuestos, otro
+  descripcion String
+  proveedor   String?
+  valorCents  Int
+  fecha       DateTime @default(now())
+  fotoUrl     String?
+  createdAt   DateTime @default(now())
+}

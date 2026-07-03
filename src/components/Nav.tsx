@@ -6,7 +6,11 @@ const links = [
   { href: "/credito", label: "Crédito", icon: "💳" },
   { href: "/fondos", label: "Fondos", icon: "🪙" },
   { href: "/ventas", label: "Ventas", icon: "🧾" },
-  { href: "/caja", label: "Cierre de caja", icon: "🔒" },
+  { href: "/caja", label: "Caja", icon: "🔒" },
+  { href: "/compras", label: "Gastos", icon: "💸" },
+  { href: "/produccion", label: "Producción", icon: "🏭" },
+  { href: "/inventario", label: "Inventario", icon: "📦" },
+  { href: "/activos", label: "Activos", icon: "🧰" },
   { href: "/energia", label: "Energía", icon: "⚡" },
   { href: "/servicios", label: "Servicios", icon: "🔌" },
 ];

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents] = await Promise.all([
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -19,7 +19,10 @@ export default async function Home() {
     db.energiaGeneracion.findMany(),
     db.medidorLectura.findMany(),
     getAjusteNumero("precioKwhCents", 0),
+    db.compraGasto.findMany(),
   ]);
+
+  const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
 
   const balEnergia = balanceEnergia({
     generacionKwh: generaciones.reduce((a, g) => a + g.kwh, 0),
@@ -57,10 +60,11 @@ export default async function Home() {
         <p className="mt-1 text-sm text-slate-500">Resumen financiero del negocio de hielo.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
         <Kpi label="Saldo del crédito" valor={formatMoney(saldoCredito)} color="text-amber-600" extra={`${avance}% pagado`} />
         <Kpi label="Ingresos (cierres)" valor={formatMoney(ingresosTotales)} color="text-sky-700" />
+        <Kpi label="Gastos registrados" valor={formatMoney(totalGastos)} color="text-red-600" />
         <Kpi label="Utilidad acumulada" valor={formatMoney(utilidad)} color="text-emerald-600" />
         <Kpi label="Ahorro solar" valor={formatMoney(balEnergia.ahorroCents)} color="text-amber-500" extra={`${balEnergia.porcentajeSolar}% con paneles`} />
       </div>
