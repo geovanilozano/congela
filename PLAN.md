@@ -159,11 +159,11 @@ Así **"todo sale de ahí"**: ningún gasto fijo depende de plata externa.
 - [x] Cálculo de **ahorro solar** y comparación generación vs consumo vs red
 - [ ] **Conexión automática** a la API del inversor (según marca confirmada) ← pendiente marca
 
-### Fase 3 — Operación
-- [ ] **Producción de hielo** (por día/turno/cubetero)
-- [ ] **Inventario** (bolsas, hielo, insumos) + alertas de stock bajo
-- [ ] **Compras y gastos** con comprobante
-- [ ] **Activos y equipos**
+### Fase 3 — Operación ✅
+- [x] **Producción de hielo** (por día/turno/cubetero)
+- [x] **Inventario** (bolsas, hielo, insumos) + alertas de stock bajo
+- [x] **Compras y gastos** con comprobante (foto)
+- [x] **Activos y equipos**
 
 ### Fase 4 — Personas y mantenimiento
 - [ ] **Personal** (turnos, asistencia, pagos, producción por empleado)
