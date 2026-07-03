@@ -170,13 +170,15 @@ Así **"todo sale de ahí"**: ningún gasto fijo depende de plata externa.
 - [x] **Mantenimiento** (preventivo/correctivo + alertas + costo a gastos)
 
 ### Fase 5 — Reportes y extras
-- [ ] Tablero de **KPIs** completo y gráficos
-- [ ] **Recuperación de inversión** y punto de equilibrio
-- [ ] **Costo real por bolsa** y margen
-- [ ] Exportar a **Excel y PDF**
-- [ ] **OCR** de facturas (opcional)
-- [ ] Alertas: inventario, consumo, temperatura, mantenimiento
-- [ ] Respaldos de información
+- [x] Tablero de **KPIs** completo y gráficos
+- [x] **Recuperación de inversión** y punto de equilibrio
+- [x] **Costo real por bolsa** y margen
+- [x] Exportar a **Excel/CSV** (ventas y gastos)
+- [ ] Exportar a **PDF** (pendiente)
+- [ ] **OCR** de facturas (pendiente, opcional)
+- [x] Alertas: inventario (stock) y mantenimiento (próximo/vencido)
+- [ ] Alertas de consumo/temperatura (pendiente, requiere medidores en vivo)
+- [ ] Login con roles y respaldos (pendiente)
 
 ---
 
