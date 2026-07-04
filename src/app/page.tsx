@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
 import { balanceEnergia } from "@/lib/finance/energia";
+import { estadoCuota } from "@/lib/finance/cuotas";
+import { estadoMantenimiento } from "@/lib/mantenimiento";
+import { bajoStock } from "@/lib/inventario";
 import { getAjusteNumero } from "@/lib/ajustes";
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
 
@@ -11,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos] = await Promise.all([
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -20,6 +23,8 @@ export default async function Home() {
     db.medidorLectura.findMany(),
     getAjusteNumero("precioKwhCents", 0),
     db.compraGasto.findMany(),
+    db.insumoInventario.findMany(),
+    db.mantenimiento.findMany(),
   ]);
 
   const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
@@ -53,12 +58,55 @@ export default async function Home() {
   }));
   const ingresosData = cierres.map((c) => ({ label: `#${c.id}`, total: c.totalCents }));
 
+  // Centro de alertas: cuotas del crédito, inventario y mantenimiento.
+  const hoy = new Date();
+  const todasLasCuotas = creditos.flatMap((c) => c.cuotas);
+  const cuotasVencidas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida").length;
+  const cuotasProximas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima").length;
+  const insumosBajos = bajoStock(insumos);
+  const mantVencidos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "vencido").length;
+  const mantProximos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "proximo").length;
+
+  const alertas: { nivel: "alta" | "media"; texto: string; href: string }[] = [];
+  if (cuotasVencidas > 0) alertas.push({ nivel: "alta", texto: `${cuotasVencidas} cuota(s) del crédito vencida(s)`, href: "/credito" });
+  if (cuotasProximas > 0) alertas.push({ nivel: "media", texto: `${cuotasProximas} cuota(s) del crédito por vencer`, href: "/credito" });
+  if (mantVencidos > 0) alertas.push({ nivel: "alta", texto: `${mantVencidos} mantenimiento(s) vencido(s)`, href: "/mantenimiento" });
+  if (insumosBajos.length > 0) alertas.push({ nivel: "media", texto: `${insumosBajos.length} insumo(s) con bajo stock: ${insumosBajos.map((i) => i.nombre).join(", ")}`, href: "/inventario" });
+  if (mantProximos > 0) alertas.push({ nivel: "media", texto: `${mantProximos} mantenimiento(s) próximo(s)`, href: "/mantenimiento" });
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">📊 Tablero</h1>
         <p className="mt-1 text-sm text-slate-500">Resumen financiero del negocio de hielo.</p>
       </div>
+
+      {/* Centro de alertas */}
+      {alertas.length > 0 ? (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-slate-600">🔔 Alertas ({alertas.length})</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {alertas.map((a, i) => (
+              <Link
+                key={i}
+                href={a.href}
+                className={`flex items-center gap-2 rounded-xl border p-3 text-sm transition hover:shadow-sm ${
+                  a.nivel === "alta"
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-amber-200 bg-amber-50 text-amber-800"
+                }`}
+              >
+                <span>{a.nivel === "alta" ? "⚠️" : "🔔"}</span>
+                <span>{a.texto}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          ✅ Todo al día: sin cuotas vencidas, stock suficiente y mantenimientos al corriente.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
