@@ -7,7 +7,8 @@ import { revalidatePath } from "next/cache";
 export async function crearVenta(formData: FormData) {
   const clienteNombre = String(formData.get("clienteNombre") || "").trim();
   const descripcion = String(formData.get("descripcion") || "Hielo");
-  const cantidad = Number(formData.get("cantidad")) || 1;
+  // Las bolsas son unidades enteras: se redondea para no romper la base de datos.
+  const cantidad = Math.max(1, Math.round(Number(formData.get("cantidad")) || 1));
   const precioPesos = Number(formData.get("precioPesos")) || 0;
   const formaPago = String(formData.get("formaPago") || "contado");
 

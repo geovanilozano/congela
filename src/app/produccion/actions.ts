@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function crearProduccion(formData: FormData) {
-  const bolsas = Number(formData.get("bolsas")) || 0;
+  // Bolsas y pérdidas son unidades enteras: se redondean para no romper la base de datos.
+  const bolsas = Math.max(0, Math.round(Number(formData.get("bolsas")) || 0));
   const activoRaw = formData.get("activoId");
   const empleadoRaw = formData.get("empleadoId");
   await db.produccion.create({
@@ -14,7 +15,7 @@ export async function crearProduccion(formData: FormData) {
       tipo: String(formData.get("tipo") || "cubo"),
       bolsas,
       kilos: formData.get("kilos") ? Number(formData.get("kilos")) : null,
-      perdidas: Number(formData.get("perdidas")) || 0,
+      perdidas: Math.max(0, Math.round(Number(formData.get("perdidas")) || 0)),
       activoId: activoRaw ? Number(activoRaw) || null : null,
       empleadoId: empleadoRaw ? Number(empleadoRaw) || null : null,
       nota: String(formData.get("nota") || "") || null,
