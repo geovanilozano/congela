@@ -28,7 +28,8 @@ export default async function ActivosPage() {
         <h1 className="text-2xl font-bold text-slate-800">🧰 Activos y equipos</h1>
         <p className="mt-1 text-sm text-slate-500">
           Cubeteros, refrigeradores, paneles, inversor, medidores y picadora: marca, capacidad,
-          consumo, garantía y estado.
+          consumo, garantía y estado. Si le pones <b>costo</b>, el equipo se suma
+          automáticamente a la <b>inversión</b> (no hay que registrarlo dos veces).
         </p>
       </div>
 
@@ -53,6 +54,10 @@ export default async function ActivosPage() {
           <input name="marca" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
+          <span className="text-slate-500">Proveedor</span>
+          <input name="proveedor" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+        </label>
+        <label className="text-sm">
           <span className="text-slate-500">Capacidad</span>
           <input name="capacidad" placeholder="400 L / 50 kg" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
@@ -63,6 +68,13 @@ export default async function ActivosPage() {
         <label className="text-sm">
           <span className="text-slate-500">Costo ($)</span>
           <input name="costoPesos" type="number" min="0" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Forma de pago</span>
+          <select name="formaPago" defaultValue="credito" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="credito">Crédito</option>
+            <option value="contado">Contado</option>
+          </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha de compra</span>

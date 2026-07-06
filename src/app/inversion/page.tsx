@@ -84,7 +84,12 @@ export default async function InversionPage() {
             )}
             {items.map((i) => (
               <tr key={i.id} className="border-t border-slate-100">
-                <td className="p-3 font-medium text-slate-700">{i.descripcion}</td>
+                <td className="p-3 font-medium text-slate-700">
+                  {i.descripcion}
+                  {i.activoId && (
+                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">🧰 equipo</span>
+                  )}
+                </td>
                 <td className="text-slate-500">{i.proveedor || "—"}</td>
                 <td className="text-slate-500">{fmtFecha(i.fecha)}</td>
                 <td>
@@ -94,10 +99,14 @@ export default async function InversionPage() {
                 </td>
                 <td className="text-right font-medium">{formatMoney(i.valorCents)}</td>
                 <td className="pr-3 text-right">
-                  <form action={eliminarInversion} className="inline">
-                    <input type="hidden" name="id" value={i.id} />
-                    <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  {i.activoId ? (
+                    <span className="text-xs text-slate-400">se edita en Activos</span>
+                  ) : (
+                    <form action={eliminarInversion} className="inline">
+                      <input type="hidden" name="id" value={i.id} />
+                      <button className="text-xs text-red-500 hover:underline">Eliminar</button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

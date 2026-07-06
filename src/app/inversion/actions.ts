@@ -29,6 +29,9 @@ export async function crearInversion(formData: FormData) {
 
 export async function eliminarInversion(formData: FormData) {
   const id = Number(formData.get("id"));
+  const inv = await db.inversion.findUnique({ where: { id } });
+  // Si la inversión pertenece a un equipo, se borra desde Activos (no aquí).
+  if (!inv || inv.activoId) return;
   await db.inversion.delete({ where: { id } });
   revalidatePath("/inversion");
   revalidatePath("/");

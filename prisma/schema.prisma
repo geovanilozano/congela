@@ -24,6 +24,10 @@ model Inversion {
   fotoUrl     String?
   creditoId   Int?
   credito     Credito? @relation(fields: [creditoId], references: [id])
+  // Si esta inversión corresponde a un equipo, queda enlazada a su activo.
+  // Al borrar el activo, su inversión se borra también (Cascade).
+  activoId    Int?     @unique
+  activo      Activo?  @relation(fields: [activoId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 }
 
@@ -200,6 +204,7 @@ model Activo {
   ubicacion      String?
   producciones   Produccion[]
   mantenimientos Mantenimiento[]
+  inversion      Inversion?
   createdAt      DateTime        @default(now())
 }
 
