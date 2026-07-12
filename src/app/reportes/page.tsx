@@ -4,6 +4,7 @@ import { costoPorBolsa, margenPorBolsa, puntoEquilibrio, recuperacionInversion }
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
+import { BotonImprimir } from "@/components/BotonImprimir";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,8 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           <h1 className="text-2xl font-bold text-slate-800">📈 Reportes financieros</h1>
           <p className="mt-1 text-sm text-slate-500">Indicadores para tomar decisiones del negocio.</p>
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="no-print flex flex-wrap gap-2 text-sm">
+          <BotonImprimir className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 hover:bg-slate-50" />
           <a href="/api/export?tipo=ventas" className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 hover:bg-slate-50">⬇️ Ventas (Excel)</a>
           <a href="/api/export?tipo=gastos" className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 hover:bg-slate-50">⬇️ Gastos (Excel)</a>
         </div>
