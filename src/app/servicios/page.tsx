@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { registrarRecibo, eliminarRecibo } from "./actions";
+import { registrarRecibo, eliminarRecibo, actualizarRecibo } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
+import { FiltroFecha } from "@/components/FiltroFecha";
+import { rangoFechas } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +18,24 @@ function fmtFecha(d: Date | null) {
   return d ? new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—";
 }
 
-export default async function ServiciosPage() {
-  const recibos = await db.reciboServicio.findMany({ orderBy: { fecha: "desc" } });
+function fmtFechaInput(d: Date | null) {
+  return d ? new Date(d).toISOString().slice(0, 10) : "";
+}
+
+export default async function ServiciosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
+}) {
+  const sp = await searchParams;
+  const enEdicion = sp.editar
+    ? await db.reciboServicio.findUnique({ where: { id: Number(sp.editar) } })
+    : null;
+
+  const recibos = await db.reciboServicio.findMany({
+    where: { fecha: rangoFechas(sp) },
+    orderBy: { fecha: "desc" },
+  });
 
   const totalPorTipo = Object.keys(TIPOS).map((t) => ({
     tipo: t,
@@ -50,12 +69,14 @@ export default async function ServiciosPage() {
 
       {/* Formulario recibo */}
       <form
-        action={registrarRecibo}
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarRecibo : registrarRecibo}
         className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-6"
       >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm">
           <span className="text-slate-500">Servicio</span>
-          <select name="tipo" defaultValue="energia" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="tipo" defaultValue={enEdicion?.tipo ?? "energia"} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             {Object.entries(TIPOS).map(([k, v]) => (
               <option key={k} value={k}>{v.icon} {v.label}</option>
             ))}
@@ -63,28 +84,62 @@ export default async function ServiciosPage() {
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor del recibo ($)</span>
-          <input name="valorPesos" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="valorPesos"
+            type="number"
+            min="0"
+            required
+            defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Consumo (kWh/m³)</span>
-          <input name="consumo" type="number" min="0" step="0.1" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="consumo"
+            type="number"
+            min="0"
+            step="0.1"
+            defaultValue={enEdicion?.consumo ?? undefined}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Desde</span>
-          <input name="periodoInicio" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="periodoInicio"
+            type="date"
+            defaultValue={fmtFechaInput(enEdicion?.periodoInicio ?? null)}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Hasta</span>
-          <input name="periodoFin" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="periodoFin"
+            type="date"
+            defaultValue={fmtFechaInput(enEdicion?.periodoFin ?? null)}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
-        <label className="text-sm">
-          <span className="text-slate-500">Foto del recibo</span>
-          <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
-        </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-6">
-          Guardar recibo
-        </button>
+        {!enEdicion && (
+          <label className="text-sm">
+            <span className="text-slate-500">Foto del recibo</span>
+            <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
+          </label>
+        )}
+        <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-6">
+          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {enEdicion ? "Guardar cambios" : "Guardar recibo"}
+          </button>
+          {enEdicion && (
+            <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
+          )}
+        </div>
       </form>
+
+      {/* Filtro por fecha */}
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
 
       {/* Lista */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -119,10 +174,10 @@ export default async function ServiciosPage() {
                   )}
                 </td>
                 <td className="pr-3 text-right">
-                  <form action={eliminarRecibo} className="inline">
-                    <input type="hidden" name="id" value={r.id} />
-                    <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  <div className="flex items-center justify-end gap-3">
+                    <a href={`?editar=${r.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                    <BotonEliminar action={eliminarRecibo} id={r.id} />
+                  </div>
                 </td>
               </tr>
             ))}

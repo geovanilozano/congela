@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { crearCompra, eliminarCompra } from "./actions";
+import { crearCompra, eliminarCompra, actualizarCompra } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
+import { FiltroFecha } from "@/components/FiltroFecha";
+import { rangoFechas } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +13,18 @@ function fmtFecha(d: Date) {
   return new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default async function ComprasPage() {
-  const gastos = await db.compraGasto.findMany({ orderBy: { fecha: "desc" } });
+function fmtFechaInput(d: Date) {
+  return new Date(d).toISOString().slice(0, 10);
+}
+
+export default async function ComprasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
+}) {
+  const sp = await searchParams;
+  const enEdicion = sp.editar ? await db.compraGasto.findUnique({ where: { id: Number(sp.editar) } }) : null;
+  const gastos = await db.compraGasto.findMany({ where: { fecha: rangoFechas(sp) }, orderBy: { fecha: "desc" } });
   const total = gastos.reduce((a, g) => a + g.valorCents, 0);
 
   const porCategoria = CATEGORIAS.map((c) => ({
@@ -42,36 +55,48 @@ export default async function ComprasPage() {
         ))}
       </div>
 
-      <form action={crearCompra} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
+
+      <form
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarCompra : crearCompra}
+        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
+      >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm">
           <span className="text-slate-500">Categoría</span>
-          <select name="categoria" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 capitalize">
+          <select name="categoria" defaultValue={enEdicion?.categoria} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 capitalize">
             {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Descripción</span>
-          <input name="descripcion" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="descripcion" required defaultValue={enEdicion?.descripcion} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Proveedor</span>
-          <input name="proveedor" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="proveedor" defaultValue={enEdicion?.proveedor ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor ($)</span>
-          <input name="valorPesos" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="valorPesos" type="number" min="0" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha</span>
-          <input name="fecha" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fecha" type="date" defaultValue={enEdicion ? fmtFechaInput(enEdicion.fecha) : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Foto del comprobante</span>
           <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
         </label>
         <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
-          Registrar gasto
+          {enEdicion ? "Guardar cambios" : "Registrar gasto"}
         </button>
+        {enEdicion && (
+          <a href="?" className="text-center text-sm text-slate-500 hover:underline sm:col-span-2 lg:col-span-5">
+            Cancelar
+          </a>
+        )}
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -102,10 +127,10 @@ export default async function ComprasPage() {
                   ) : <span className="text-slate-400">—</span>}
                 </td>
                 <td className="pr-3 text-right">
-                  <form action={eliminarCompra} className="inline">
-                    <input type="hidden" name="id" value={g.id} />
-                    <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  <div className="flex items-center justify-end gap-2">
+                    <a href={`?editar=${g.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                    <BotonEliminar action={eliminarCompra} id={g.id} />
+                  </div>
                 </td>
               </tr>
             ))}

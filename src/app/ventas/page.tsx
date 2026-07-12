@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearVenta, eliminarVenta } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
+import { FiltroFecha } from "@/components/FiltroFecha";
+import { rangoFechas } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -8,9 +11,14 @@ function fmtFechaHora(d: Date) {
   return new Date(d).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export default async function VentasPage() {
+export default async function VentasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; hasta?: string }>;
+}) {
+  const sp = await searchParams;
   const ventas = await db.venta.findMany({
-    where: { cierreId: null },
+    where: { cierreId: null, fecha: rangoFechas(sp) },
     include: { cliente: true, items: true },
     orderBy: { id: "desc" },
   });
@@ -63,6 +71,8 @@ export default async function VentasPage() {
         <span className="text-lg font-bold">{formatMoney(totalPendiente)}</span>
       </div>
 
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
+
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
@@ -89,10 +99,7 @@ export default async function VentasPage() {
                 <td className={v.formaPago === "credito" ? "text-amber-600" : "text-emerald-600"}>{v.formaPago}</td>
                 <td className="text-right font-medium">{formatMoney(v.totalCents)}</td>
                 <td className="pr-3 text-right">
-                  <form action={eliminarVenta} className="inline">
-                    <input type="hidden" name="id" value={v.id} />
-                    <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  <BotonEliminar action={eliminarVenta} id={v.id} />
                 </td>
               </tr>
             ))}

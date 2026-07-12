@@ -23,6 +23,28 @@ export async function crearMantenimiento(formData: FormData) {
   revalidatePath("/mantenimiento");
 }
 
+export async function actualizarMantenimiento(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const descripcion = String(formData.get("descripcion") || "").trim();
+  if (!descripcion) return;
+  const activoRaw = formData.get("activoId");
+  await db.mantenimiento.update({
+    where: { id },
+    data: {
+      descripcion,
+      tipo: String(formData.get("tipo") || "preventivo"),
+      activoId: activoRaw ? Number(activoRaw) || null : null,
+      fechaProgramada: formData.get("fechaProgramada")
+        ? new Date(String(formData.get("fechaProgramada")))
+        : new Date(),
+      costoCents: toCents(Number(formData.get("costoPesos")) || 0),
+      nota: String(formData.get("nota") || "") || null,
+    },
+  });
+  revalidatePath("/mantenimiento");
+}
+
 export async function marcarRealizado(formData: FormData) {
   const id = Number(formData.get("id"));
   const m = await db.mantenimiento.findUnique({ where: { id } });

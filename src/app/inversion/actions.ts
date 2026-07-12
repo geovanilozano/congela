@@ -27,6 +27,37 @@ export async function crearInversion(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function actualizarInversion(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+
+  const inv = await db.inversion.findUnique({ where: { id } });
+  // Si la inversión pertenece a un equipo, se edita desde Activos (no aquí).
+  if (!inv || inv.activoId) return;
+
+  const descripcion = String(formData.get("descripcion") || "");
+  const proveedor = String(formData.get("proveedor") || "");
+  const valorPesos = Number(formData.get("valorPesos")) || 0;
+  const formaPago = String(formData.get("formaPago") || "credito");
+  const fecha = formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date();
+
+  if (!descripcion) return;
+
+  await db.inversion.update({
+    where: { id },
+    data: {
+      descripcion,
+      proveedor: proveedor || null,
+      valorCents: toCents(valorPesos),
+      formaPago,
+      fecha,
+    },
+  });
+
+  revalidatePath("/inversion");
+  revalidatePath("/");
+}
+
 export async function eliminarInversion(formData: FormData) {
   const id = Number(formData.get("id"));
   const inv = await db.inversion.findUnique({ where: { id } });

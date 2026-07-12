@@ -36,8 +36,37 @@ export async function GET(request: Request) {
     for (const g of gastos) {
       rows.push([fecha(g.fecha), g.categoria, g.descripcion, g.proveedor ?? "", fromCents(g.valorCents)]);
     }
+  } else if (tipo === "respaldo") {
+    // Respaldo completo de toda la base en JSON.
+    const [
+      inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
+      cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
+      produccion, activo, empleado, asistencia, pagoNomina, mantenimiento,
+      energiaGeneracion, medidorLectura, reciboServicio, ajuste,
+    ] = await Promise.all([
+      db.inversion.findMany(), db.credito.findMany(), db.cuotaAmortizacion.findMany(),
+      db.pagoCredito.findMany(), db.fondo.findMany(), db.reglaReparto.findMany(),
+      db.movimientoFondo.findMany(), db.cliente.findMany(), db.venta.findMany(),
+      db.ventaItem.findMany(), db.cierreCaja.findMany(), db.compraGasto.findMany(),
+      db.insumoInventario.findMany(), db.movimientoInventario.findMany(), db.produccion.findMany(),
+      db.activo.findMany(), db.empleado.findMany(), db.asistencia.findMany(),
+      db.pagoNomina.findMany(), db.mantenimiento.findMany(), db.energiaGeneracion.findMany(),
+      db.medidorLectura.findMany(), db.reciboServicio.findMany(), db.ajuste.findMany(),
+    ]);
+    const respaldo = {
+      inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
+      cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
+      produccion, activo, empleado, asistencia, pagoNomina, mantenimiento,
+      energiaGeneracion, medidorLectura, reciboServicio, ajuste,
+    };
+    return new Response(JSON.stringify(respaldo, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="congela-respaldo.json"`,
+      },
+    });
   } else {
-    return new Response("Tipo no válido. Usa ?tipo=ventas o ?tipo=gastos", { status: 400 });
+    return new Response("Tipo no válido. Usa ?tipo=ventas, ?tipo=gastos o ?tipo=respaldo", { status: 400 });
   }
 
   // BOM para que Excel reconozca los acentos (UTF-8).

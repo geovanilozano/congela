@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { crearInversion, eliminarInversion } from "./actions";
+import { crearInversion, eliminarInversion, actualizarInversion } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,9 @@ function fmtFecha(d: Date) {
   return new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default async function InversionPage() {
+export default async function InversionPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
+  const sp = await searchParams;
+  const enEdicion = sp.editar ? await db.inversion.findUnique({ where: { id: Number(sp.editar) } }) : null;
   const items = await db.inversion.findMany({ orderBy: { fecha: "desc" } });
   const total = items.reduce((a, i) => a + i.valorCents, 0);
   const totalCredito = items.filter((i) => i.formaPago === "credito").reduce((a, i) => a + i.valorCents, 0);
@@ -35,35 +38,46 @@ export default async function InversionPage() {
       </div>
 
       <form
-        action={crearInversion}
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarInversion : crearInversion}
         className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
       >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Descripción</span>
-          <input name="descripcion" required placeholder="Ej: Refrigerador 400L" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="descripcion" required placeholder="Ej: Refrigerador 400L" defaultValue={enEdicion?.descripcion} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Proveedor</span>
-          <input name="proveedor" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="proveedor" defaultValue={enEdicion?.proveedor ?? undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor ($)</span>
-          <input name="valorPesos" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="valorPesos" type="number" min="0" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Forma de pago</span>
-          <select name="formaPago" defaultValue="credito" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="formaPago" defaultValue={enEdicion?.formaPago ?? "credito"} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             <option value="credito">Crédito</option>
             <option value="contado">Contado</option>
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha</span>
-          <input name="fecha" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fecha" type="date" defaultValue={enEdicion ? new Date(enEdicion.fecha).toISOString().slice(0, 10) : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
-          Agregar a la inversión
-        </button>
+        {enEdicion ? (
+          <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
+            <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+              Guardar cambios
+            </button>
+            <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
+          </div>
+        ) : (
+          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
+            Agregar a la inversión
+          </button>
+        )}
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -102,10 +116,10 @@ export default async function InversionPage() {
                   {i.activoId ? (
                     <span className="text-xs text-slate-400">se edita en Activos</span>
                   ) : (
-                    <form action={eliminarInversion} className="inline">
-                      <input type="hidden" name="id" value={i.id} />
-                      <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                    </form>
+                    <div className="flex items-center justify-end gap-3">
+                      <a href={`?editar=${i.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                      <BotonEliminar action={eliminarInversion} id={i.id} />
+                    </div>
                   )}
                 </td>
               </tr>

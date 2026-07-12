@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/finance/money";
-import { crearEmpleado, registrarAsistencia, registrarPago, eliminarEmpleado } from "./actions";
+import { formatMoney, fromCents } from "@/lib/finance/money";
+import { crearEmpleado, registrarAsistencia, registrarPago, eliminarEmpleado, actualizarEmpleado } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ const estadoColor: Record<string, string> = {
   ausente: "text-red-600",
 };
 
-export default async function PersonalPage() {
+export default async function PersonalPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
+  const sp = await searchParams;
   const empleados = await db.empleado.findMany({
     include: {
       asistencias: { orderBy: { fecha: "desc" }, take: 5 },
@@ -19,6 +21,8 @@ export default async function PersonalPage() {
     },
     orderBy: { nombre: "asc" },
   });
+
+  const enEdicion = sp.editar ? await db.empleado.findUnique({ where: { id: Number(sp.editar) } }) : null;
 
   const totalNomina = empleados.reduce((a, e) => a + e.pagos.reduce((s, p) => s + p.valorCents, 0), 0);
 
@@ -42,31 +46,54 @@ export default async function PersonalPage() {
         </div>
       </div>
 
-      {/* Nuevo empleado */}
-      <form action={crearEmpleado} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+      {/* Nuevo empleado / edición */}
+      <form
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarEmpleado : crearEmpleado}
+        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
+      >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm">
           <span className="text-slate-500">Nombre</span>
-          <input name="nombre" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="nombre" required defaultValue={enEdicion?.nombre ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Cargo</span>
-          <input name="cargo" placeholder="Operario / Vendedor" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="cargo" placeholder="Operario / Vendedor" defaultValue={enEdicion?.cargo ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Teléfono</span>
-          <input name="telefono" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="telefono" defaultValue={enEdicion?.telefono ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Salario ($)</span>
-          <input name="salarioPesos" type="number" min="0" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="salarioPesos"
+            type="number"
+            min="0"
+            defaultValue={enEdicion ? fromCents(enEdicion.salarioCents) : undefined}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha de ingreso</span>
-          <input name="fechaIngreso" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input
+            name="fechaIngreso"
+            type="date"
+            defaultValue={enEdicion?.fechaIngreso ? new Date(enEdicion.fechaIngreso).toISOString().slice(0, 10) : undefined}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
+          />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
-          Agregar empleado
-        </button>
+        <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
+          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {enEdicion ? "Guardar cambios" : "Agregar empleado"}
+          </button>
+          {enEdicion && (
+            <a href="?" className="text-sm text-slate-500 hover:underline">
+              Cancelar
+            </a>
+          )}
+        </div>
       </form>
 
       {/* Tarjetas de empleados */}
@@ -82,10 +109,10 @@ export default async function PersonalPage() {
                   <h2 className="font-semibold text-slate-800">{e.nombre}</h2>
                   <p className="text-xs text-slate-500">{e.cargo || "—"} · {e.telefono || "sin teléfono"}</p>
                 </div>
-                <form action={eliminarEmpleado}>
-                  <input type="hidden" name="id" value={e.id} />
-                  <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                </form>
+                <div className="flex items-center gap-2">
+                  <a href={`?editar=${e.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                  <BotonEliminar action={eliminarEmpleado} id={e.id} />
+                </div>
               </div>
 
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">

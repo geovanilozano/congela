@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/finance/money";
-import { crearActivo, eliminarActivo } from "./actions";
+import { formatMoney, fromCents } from "@/lib/finance/money";
+import { crearActivo, actualizarActivo, eliminarActivo } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,21 @@ function fmtFecha(d: Date | null) {
   return d ? new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—";
 }
 
-export default async function ActivosPage() {
+function fmtFechaInput(d: Date | null) {
+  return d ? new Date(d).toISOString().slice(0, 10) : "";
+}
+
+export default async function ActivosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string }>;
+}) {
+  const sp = await searchParams;
   const activos = await db.activo.findMany({ orderBy: { id: "desc" } });
   const totalCosto = activos.reduce((a, x) => a + x.costoCents, 0);
+  const enEdicion = sp.editar
+    ? await db.activo.findUnique({ where: { id: Number(sp.editar) }, include: { inversion: true } })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -38,65 +51,77 @@ export default async function ActivosPage() {
         <div className="mt-0.5 text-xl font-bold text-slate-800">{formatMoney(totalCosto)}</div>
       </div>
 
-      <form action={crearActivo} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+      <form
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarActivo : crearActivo}
+        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm">
           <span className="text-slate-500">Nombre</span>
-          <input name="nombre" required placeholder="Refrigerador #1" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="nombre" required placeholder="Refrigerador #1" defaultValue={enEdicion?.nombre} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Tipo</span>
-          <select name="tipo" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="tipo" defaultValue={enEdicion?.tipo ?? TIPOS[0]} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Marca</span>
-          <input name="marca" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="marca" defaultValue={enEdicion?.marca ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Proveedor</span>
-          <input name="proveedor" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="proveedor" defaultValue={enEdicion?.inversion?.proveedor ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Capacidad</span>
-          <input name="capacidad" placeholder="400 L / 50 kg" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="capacidad" placeholder="400 L / 50 kg" defaultValue={enEdicion?.capacidad ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Consumo (kWh)</span>
-          <input name="consumoKwh" type="number" min="0" step="0.1" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="consumoKwh" type="number" min="0" step="0.1" defaultValue={enEdicion?.consumoKwh ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Costo ($)</span>
-          <input name="costoPesos" type="number" min="0" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="costoPesos" type="number" min="0" defaultValue={enEdicion ? fromCents(enEdicion.costoCents) : ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Forma de pago</span>
-          <select name="formaPago" defaultValue="credito" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="formaPago" defaultValue={enEdicion?.inversion?.formaPago ?? "credito"} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             <option value="credito">Crédito</option>
             <option value="contado">Contado</option>
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha de compra</span>
-          <input name="fechaCompra" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fechaCompra" type="date" defaultValue={fmtFechaInput(enEdicion?.fechaCompra ?? null)} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Garantía hasta</span>
-          <input name="garantiaHasta" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="garantiaHasta" type="date" defaultValue={fmtFechaInput(enEdicion?.garantiaHasta ?? null)} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Estado</span>
-          <select name="estado" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="estado" defaultValue={enEdicion?.estado ?? ESTADOS[0]} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Ubicación</span>
-          <input name="ubicacion" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="ubicacion" defaultValue={enEdicion?.ubicacion ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-4">
-          Agregar equipo
-        </button>
+        <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-4">
+          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {enEdicion ? "Guardar cambios" : "Agregar equipo"}
+          </button>
+          {enEdicion && (
+            <a href="?" className="text-sm text-slate-500 hover:underline">
+              Cancelar
+            </a>
+          )}
+        </div>
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -125,10 +150,10 @@ export default async function ActivosPage() {
                 <td className={estadoColor[a.estado] ?? "text-slate-600"}>{a.estado}</td>
                 <td className="text-right font-medium">{formatMoney(a.costoCents)}</td>
                 <td className="pr-3 text-right">
-                  <form action={eliminarActivo} className="inline">
-                    <input type="hidden" name="id" value={a.id} />
-                    <button className="text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  <div className="flex items-center justify-end gap-3">
+                    <a href={`?editar=${a.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                    <BotonEliminar action={eliminarActivo} id={a.id} />
+                  </div>
                 </td>
               </tr>
             ))}

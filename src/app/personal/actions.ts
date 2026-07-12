@@ -19,6 +19,24 @@ export async function crearEmpleado(formData: FormData) {
   revalidatePath("/personal");
 }
 
+export async function actualizarEmpleado(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const nombre = String(formData.get("nombre") || "").trim();
+  if (!nombre) return;
+  await db.empleado.update({
+    where: { id },
+    data: {
+      nombre,
+      cargo: String(formData.get("cargo") || "") || null,
+      telefono: String(formData.get("telefono") || "") || null,
+      salarioCents: toCents(Number(formData.get("salarioPesos")) || 0),
+      fechaIngreso: formData.get("fechaIngreso") ? new Date(String(formData.get("fechaIngreso"))) : null,
+    },
+  });
+  revalidatePath("/personal");
+}
+
 export async function registrarAsistencia(formData: FormData) {
   const empleadoId = Number(formData.get("empleadoId"));
   await db.asistencia.create({
