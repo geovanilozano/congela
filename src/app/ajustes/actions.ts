@@ -2,7 +2,14 @@
 
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { setAjuste } from "@/lib/ajustes";
 import { revalidatePath } from "next/cache";
+
+export async function guardarClaveOcr(formData: FormData) {
+  const clave = String(formData.get("anthropicApiKey") || "").trim();
+  if (clave) await setAjuste("anthropicApiKey", clave);
+  revalidatePath("/ajustes");
+}
 
 export async function crearUsuario(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();

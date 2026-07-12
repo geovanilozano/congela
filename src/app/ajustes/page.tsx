@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { ROLES } from "@/lib/auth/permisos";
-import { borrarDatosDemo, crearUsuario, eliminarUsuario } from "./actions";
+import { getAjuste } from "@/lib/ajustes";
+import { borrarDatosDemo, crearUsuario, eliminarUsuario, guardarClaveOcr } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ const etiquetaRol: Record<string, string> = { dueno: "Dueño", cajero: "Cajero",
 
 export default async function AjustesPage() {
   const usuarios = await db.usuario.findMany({ orderBy: { id: "asc" } });
+  const claveOcr = await getAjuste("anthropicApiKey");
 
   return (
     <div className="space-y-6">
@@ -50,6 +52,31 @@ export default async function AjustesPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Lectura de facturas por foto (IA) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold text-slate-700">📸 Leer facturas por foto (IA)</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Pega tu <b>clave de API</b> para poder leer los datos de los recibos con una foto (en la
+          pantalla de Servicios). Tiene un pequeño costo por uso.{" "}
+          {claveOcr ? (
+            <span className="font-medium text-emerald-600">✓ Clave configurada.</span>
+          ) : (
+            <span className="font-medium text-amber-600">Aún no has configurado la clave.</span>
+          )}
+        </p>
+        <form action={guardarClaveOcr} className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            name="anthropicApiKey"
+            type="password"
+            placeholder={claveOcr ? "•••••••••• (ya configurada, pega otra para cambiarla)" : "sk-ant-..."}
+            className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            Guardar clave
+          </BotonGuardar>
+        </form>
       </div>
 
       {/* Respaldo */}

@@ -5,6 +5,7 @@ import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
+import { LectorFoto } from "@/components/LectorFoto";
 
 export const dynamic = "force-dynamic";
 
@@ -124,10 +125,9 @@ export default async function ServiciosPage({
           />
         </label>
         {!enEdicion && (
-          <label className="text-sm">
-            <span className="text-slate-500">Foto del recibo</span>
-            <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
-          </label>
+          <div className="text-sm sm:col-span-2">
+            <LectorFoto />
+          </div>
         )}
         <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-6">
           <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
