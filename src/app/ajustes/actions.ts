@@ -1,7 +1,35 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/auth/password";
 import { revalidatePath } from "next/cache";
+
+export async function crearUsuario(formData: FormData) {
+  const nombre = String(formData.get("nombre") || "").trim();
+  const usuario = String(formData.get("usuario") || "").trim().toLowerCase();
+  const clave = String(formData.get("clave") || "");
+  const rol = String(formData.get("rol") || "operario");
+  if (!nombre || !usuario || clave.length < 4) return;
+
+  const existe = await db.usuario.findUnique({ where: { usuario } });
+  if (existe) return; // usuario repetido: no hacer nada
+
+  await db.usuario.create({ data: { nombre, usuario, passwordHash: hashPassword(clave), rol } });
+  revalidatePath("/ajustes");
+}
+
+export async function eliminarUsuario(formData: FormData) {
+  const id = Number(formData.get("id"));
+  // No dejar la app sin ningún dueño.
+  const u = await db.usuario.findUnique({ where: { id } });
+  if (!u) return;
+  if (u.rol === "dueno") {
+    const duenos = await db.usuario.count({ where: { rol: "dueno" } });
+    if (duenos <= 1) return;
+  }
+  await db.usuario.delete({ where: { id } });
+  revalidatePath("/ajustes");
+}
 
 // Borra todos los datos de operación (deja la estructura de fondos).
 // Útil para quitar los datos de demostración y empezar limpio.
