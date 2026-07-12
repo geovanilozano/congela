@@ -3,6 +3,7 @@ import { formatMoney } from "@/lib/finance/money";
 import { repartir, ReglaFondo } from "@/lib/finance/fondos";
 import { ensureFondos } from "@/lib/seed";
 import { cerrarCaja } from "./actions";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -68,12 +69,12 @@ export default async function CajaPage() {
         </div>
 
         <form action={cerrarCaja} className="mt-5">
-          <button
+          <BotonGuardar
             disabled={totalPendiente === 0}
             className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             Cerrar caja y repartir el dinero
-          </button>
+          </BotonGuardar>
         </form>
       </div>
 

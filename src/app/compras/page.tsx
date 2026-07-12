@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearCompra, eliminarCompra, actualizarCompra } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 
@@ -89,9 +90,9 @@ export default async function ComprasPage({
           <span className="text-slate-500">Foto del comprobante</span>
           <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
+        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
           {enEdicion ? "Guardar cambios" : "Registrar gasto"}
-        </button>
+        </BotonGuardar>
         {enEdicion && (
           <a href="?" className="text-center text-sm text-slate-500 hover:underline sm:col-span-2 lg:col-span-5">
             Cancelar

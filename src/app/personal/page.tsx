@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney, fromCents } from "@/lib/finance/money";
 import { crearEmpleado, registrarAsistencia, registrarPago, eliminarEmpleado, actualizarEmpleado } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -85,9 +86,9 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
           />
         </label>
         <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
-          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
             {enEdicion ? "Guardar cambios" : "Agregar empleado"}
-          </button>
+          </BotonGuardar>
           {enEdicion && (
             <a href="?" className="text-sm text-slate-500 hover:underline">
               Cancelar
@@ -140,7 +141,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
                   <option value="ausente">Ausente</option>
                 </select>
                 <input name="fecha" type="date" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-                <button className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">Marcar asistencia</button>
+                <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">Marcar asistencia</BotonGuardar>
               </form>
 
               {/* Pago rápido */}
@@ -148,7 +149,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
                 <input type="hidden" name="empleadoId" value={e.id} />
                 <input name="valorPesos" type="number" min="0" placeholder="Valor $" className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                 <input name="concepto" defaultValue="Salario" className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-                <button className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">Registrar pago</button>
+                <BotonGuardar className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">Registrar pago</BotonGuardar>
               </form>
 
               {/* Últimas asistencias */}

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
 import { guardarRegla } from "./actions";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -102,12 +103,9 @@ export default async function FondosPage() {
                 </label>
               </div>
 
-              <button
-                type="submit"
-                className="mt-4 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-sky-700"
-              >
+              <BotonGuardar className="mt-4 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-sky-700">
                 Guardar
-              </button>
+              </BotonGuardar>
             </form>
           );
         })}

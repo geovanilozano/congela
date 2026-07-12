@@ -3,6 +3,7 @@ import { formatMoney, fromCents } from "@/lib/finance/money";
 import { balanceEnergia } from "@/lib/finance/energia";
 import { getAjusteNumero } from "@/lib/ajustes";
 import { guardarPrecioKwh, registrarGeneracion, registrarConsumo } from "./actions";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function EnergiaPage() {
           <span className="text-slate-500">Precio del kWh ($)</span>
           <input name="precioPesos" type="number" min="0" step="1" defaultValue={precioKwhCents ? fromCents(precioKwhCents) : ""} className="mt-1 w-40 rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">Guardar precio</button>
+        <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">Guardar precio</BotonGuardar>
       </form>
 
       {/* Registrar generación y consumo */}
@@ -63,7 +64,7 @@ export default async function EnergiaPage() {
               <input name="fecha" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           </div>
-          <button className="mt-3 w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600">Guardar generación</button>
+          <BotonGuardar className="mt-3 w-full rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600">Guardar generación</BotonGuardar>
         </form>
 
         <form action={registrarConsumo} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -78,7 +79,7 @@ export default async function EnergiaPage() {
               <input name="fecha" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           </div>
-          <button className="mt-3 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">Guardar consumo</button>
+          <BotonGuardar className="mt-3 w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">Guardar consumo</BotonGuardar>
         </form>
       </div>
 

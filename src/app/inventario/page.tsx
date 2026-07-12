@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { bajoStock, necesitaReposicion } from "@/lib/inventario";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { crearInsumo, moverInventario, eliminarInsumo, actualizarInsumo } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +51,9 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
             <input name="stockMinimo" type="number" min="0" step="0.1" defaultValue={enEdicion.stockMinimo} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
           </label>
           <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-5">
-            <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
               Guardar cambios
-            </button>
+            </BotonGuardar>
             <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
           </div>
         </form>
@@ -77,9 +78,9 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
           <span className="text-slate-500">Stock mínimo (alerta)</span>
           <input name="stockMinimo" type="number" min="0" step="0.1" defaultValue={0} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
+        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
           Agregar insumo
-        </button>
+        </BotonGuardar>
       </form>
 
       <div className="space-y-3">
@@ -106,7 +107,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                     <option value="entrada">Entrada</option>
                     <option value="salida">Salida</option>
                   </select>
-                  <button className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">Aplicar</button>
+                  <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">Aplicar</BotonGuardar>
                 </form>
                 <div className="flex items-center gap-3">
                   <a href={`?editar=${i.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>

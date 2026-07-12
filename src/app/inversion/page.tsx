@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearInversion, eliminarInversion, actualizarInversion } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -68,15 +69,15 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
         </label>
         {enEdicion ? (
           <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
-            <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
               Guardar cambios
-            </button>
+            </BotonGuardar>
             <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
           </div>
         ) : (
-          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
             Agregar a la inversión
-          </button>
+          </BotonGuardar>
         )}
       </form>
 

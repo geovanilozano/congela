@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { crearProduccion, eliminarProduccion, actualizarProduccion } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 
@@ -111,9 +112,9 @@ export default async function ProduccionPage({
           <span className="text-slate-500">Nota</span>
           <input name="nota" defaultValue={enEdicion?.nota ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-4">
+        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-4">
           {enEdicion ? "Guardar cambios" : "Registrar producción"}
-        </button>
+        </BotonGuardar>
         {enEdicion && (
           <a href="?" className="self-center text-sm text-slate-500 hover:underline sm:col-span-2 lg:col-span-4">
             Cancelar

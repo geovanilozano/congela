@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearCredito, registrarPago } from "./actions";
+import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,9 @@ export default async function CreditoPage() {
           <span className="text-slate-500">Fecha de inicio</span>
           <input name="fechaInicio" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
+        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
           Crear crédito y generar tabla de pagos
-        </button>
+        </BotonGuardar>
       </form>
 
       {creditos.length === 0 && (
@@ -136,9 +137,9 @@ export default async function CreditoPage() {
                         ) : (
                           <form action={registrarPago} className="inline">
                             <input type="hidden" name="cuotaId" value={q.id} />
-                            <button className="rounded-md bg-slate-800 px-2 py-1 text-xs text-white hover:bg-slate-700">
+                            <BotonGuardar className="rounded-md bg-slate-800 px-2 py-1 text-xs text-white hover:bg-slate-700">
                               Registrar pago
-                            </button>
+                            </BotonGuardar>
                           </form>
                         )}
                       </td>

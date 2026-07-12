@@ -3,6 +3,7 @@ import { formatMoney } from "@/lib/finance/money";
 import { estadoMantenimiento, EstadoMantenimiento } from "@/lib/mantenimiento";
 import { crearMantenimiento, actualizarMantenimiento, marcarRealizado, eliminarMantenimiento } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 
@@ -96,9 +97,9 @@ export default async function MantenimientoPage({
           <input name="nota" defaultValue={enEdicion?.nota ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-5">
-          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
             {enEdicion ? "Guardar cambios" : "Programar mantenimiento"}
-          </button>
+          </BotonGuardar>
           {enEdicion && (
             <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
           )}
@@ -136,7 +137,7 @@ export default async function MantenimientoPage({
                   {m.estado !== "realizado" && (
                     <form action={marcarRealizado} className="mb-1 inline">
                       <input type="hidden" name="id" value={m.id} />
-                      <button className="rounded-md bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700">Marcar realizado</button>
+                      <BotonGuardar className="rounded-md bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700">Marcar realizado</BotonGuardar>
                     </form>
                   )}
                   <div className="flex items-center justify-end gap-3">

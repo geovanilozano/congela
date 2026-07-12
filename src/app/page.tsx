@@ -56,7 +56,18 @@ export default async function Home() {
     nombre: f.nombre,
     saldo: f.movimientos.reduce((a, m) => a + m.montoCents, 0),
   }));
-  const ingresosData = cierres.map((c) => ({ label: `#${c.id}`, total: c.totalCents }));
+  const ingresosData = cierres.map((c) => ({
+    label: new Date(c.fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }),
+    total: c.totalCents,
+  }));
+
+  // ¿La base está prácticamente vacía? Mostrar una guía de primeros pasos.
+  const sinDatos =
+    inversiones.length === 0 &&
+    creditos.length === 0 &&
+    cierres.length === 0 &&
+    gastos.length === 0 &&
+    insumos.length === 0;
 
   // Centro de alertas: cuotas del crédito, inventario y mantenimiento.
   const hoy = new Date();
@@ -80,6 +91,36 @@ export default async function Home() {
         <h1 className="text-2xl font-bold text-slate-800">📊 Tablero</h1>
         <p className="mt-1 text-sm text-slate-500">Resumen financiero del negocio de hielo.</p>
       </div>
+
+      {/* Guía de primeros pasos (cuando la base está vacía) */}
+      {sinDatos && (
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-slate-800">👋 ¡Bienvenido! Primeros pasos</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Para empezar a llevar el control del negocio, te recomendamos este orden:
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {[
+              { href: "/credito", icon: "💳", n: "1", t: "Registra el crédito", d: "El préstamo con que pagas los equipos" },
+              { href: "/activos", icon: "🧰", n: "2", t: "Carga tus equipos", d: "Refrigeradores y cubeteros (se suman a la inversión)" },
+              { href: "/ventas", icon: "🧾", n: "3", t: "Registra las ventas", d: "Y cierra la caja para repartir el dinero" },
+            ].map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                className="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-sky-300 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-sky-100 text-sm font-bold text-sky-700">{p.n}</span>
+                  <span className="text-lg">{p.icon}</span>
+                </div>
+                <div className="mt-2 font-medium text-slate-800 group-hover:text-sky-700">{p.t}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{p.d}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Centro de alertas */}
       {alertas.length > 0 ? (

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { registrarRecibo, eliminarRecibo, actualizarRecibo } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 
@@ -129,9 +130,9 @@ export default async function ServiciosPage({
           </label>
         )}
         <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-6">
-          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
             {enEdicion ? "Guardar cambios" : "Guardar recibo"}
-          </button>
+          </BotonGuardar>
           {enEdicion && (
             <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
           )}

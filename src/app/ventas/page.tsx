@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearVenta, eliminarVenta } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 
@@ -61,9 +62,9 @@ export default async function VentasPage({
             <option value="credito">Crédito</option>
           </select>
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-6">
+        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-6">
           Registrar venta
-        </button>
+        </BotonGuardar>
       </form>
 
       <div className="flex items-center justify-between rounded-xl bg-sky-600 px-5 py-3 text-white">
