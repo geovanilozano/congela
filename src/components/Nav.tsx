@@ -16,6 +16,7 @@ const links = [
   { href: "/mantenimiento", label: "Mantenimiento", icon: "🛠️" },
   { href: "/energia", label: "Energía", icon: "⚡" },
   { href: "/servicios", label: "Servicios", icon: "🔌" },
+  { href: "/ajustes", label: "Ajustes", icon: "⚙️" },
 ];
 
 export default function Nav() {

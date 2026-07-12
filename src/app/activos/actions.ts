@@ -48,6 +48,68 @@ export async function crearActivo(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function actualizarActivo(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+
+  const nombre = String(formData.get("nombre") || "").trim();
+  if (!nombre) return;
+
+  const costoCents = toCents(Number(formData.get("costoPesos")) || 0);
+  const proveedor = String(formData.get("proveedor") || "") || null;
+  const formaPago = String(formData.get("formaPago") || "credito");
+  const fechaCompra = formData.get("fechaCompra") ? new Date(String(formData.get("fechaCompra"))) : null;
+
+  await db.activo.update({
+    where: { id },
+    data: {
+      nombre,
+      tipo: String(formData.get("tipo") || "otro"),
+      marca: String(formData.get("marca") || "") || null,
+      capacidad: String(formData.get("capacidad") || "") || null,
+      consumoKwh: formData.get("consumoKwh") ? Number(formData.get("consumoKwh")) : null,
+      costoCents,
+      fechaCompra,
+      garantiaHasta: formData.get("garantiaHasta") ? new Date(String(formData.get("garantiaHasta"))) : null,
+      estado: String(formData.get("estado") || "activo"),
+      ubicacion: String(formData.get("ubicacion") || "") || null,
+    },
+  });
+
+  // Sincroniza la inversión ligada al activo, para no duplicar el registro.
+  const inv = await db.inversion.findUnique({ where: { activoId: id } });
+
+  if (costoCents > 0 && inv) {
+    await db.inversion.update({
+      where: { id: inv.id },
+      data: {
+        descripcion: nombre,
+        proveedor,
+        valorCents: costoCents,
+        formaPago,
+        fecha: fechaCompra ?? inv.fecha,
+      },
+    });
+  } else if (costoCents > 0 && !inv) {
+    await db.inversion.create({
+      data: {
+        descripcion: nombre,
+        proveedor,
+        valorCents: costoCents,
+        formaPago,
+        fecha: fechaCompra ?? new Date(),
+        activoId: id,
+      },
+    });
+  } else if (costoCents === 0 && inv) {
+    await db.inversion.delete({ where: { id: inv.id } });
+  }
+
+  revalidatePath("/activos");
+  revalidatePath("/inversion");
+  revalidatePath("/");
+}
+
 export async function eliminarActivo(formData: FormData) {
   // La inversión enlazada se borra en cascada (ver schema.prisma).
   await db.activo.delete({ where: { id: Number(formData.get("id")) } });

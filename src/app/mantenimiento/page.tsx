@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { estadoMantenimiento, EstadoMantenimiento } from "@/lib/mantenimiento";
-import { crearMantenimiento, marcarRealizado, eliminarMantenimiento } from "./actions";
+import { crearMantenimiento, actualizarMantenimiento, marcarRealizado, eliminarMantenimiento } from "./actions";
+import { BotonEliminar } from "@/components/BotonEliminar";
+import { FiltroFecha } from "@/components/FiltroFecha";
+import { rangoFechas } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +19,24 @@ function fmtFecha(d: Date | null) {
   return d ? new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" }) : "—";
 }
 
-export default async function MantenimientoPage() {
-  const [mantenimientos, activos] = await Promise.all([
-    db.mantenimiento.findMany({ include: { activo: true }, orderBy: { fechaProgramada: "asc" } }),
+function fmtFechaInput(d: Date | null) {
+  return d ? new Date(d).toISOString().slice(0, 10) : "";
+}
+
+export default async function MantenimientoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
+}) {
+  const sp = await searchParams;
+  const [mantenimientos, activos, enEdicion] = await Promise.all([
+    db.mantenimiento.findMany({
+      where: { fechaProgramada: rangoFechas(sp) },
+      include: { activo: true },
+      orderBy: { fechaProgramada: "asc" },
+    }),
     db.activo.findMany({ orderBy: { nombre: "asc" } }),
+    sp.editar ? db.mantenimiento.findUnique({ where: { id: Number(sp.editar) } }) : null,
   ]);
 
   const hoy = new Date();
@@ -42,41 +59,53 @@ export default async function MantenimientoPage() {
         </div>
       )}
 
-      <form action={crearMantenimiento} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+      <form
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarMantenimiento : crearMantenimiento}
+        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
+      >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Descripción</span>
-          <input name="descripcion" required placeholder="Limpieza de condensador" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="descripcion" required placeholder="Limpieza de condensador" defaultValue={enEdicion?.descripcion} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Tipo</span>
-          <select name="tipo" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="tipo" defaultValue={enEdicion?.tipo ?? "preventivo"} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             <option value="preventivo">Preventivo</option>
             <option value="correctivo">Correctivo</option>
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Equipo</span>
-          <select name="activoId" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+          <select name="activoId" defaultValue={enEdicion?.activoId ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
             <option value="">—</option>
             {activos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha programada</span>
-          <input name="fechaProgramada" type="date" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fechaProgramada" type="date" required defaultValue={fmtFechaInput(enEdicion?.fechaProgramada ?? null)} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Costo estimado ($)</span>
-          <input name="costoPesos" type="number" min="0" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="costoPesos" type="number" min="0" defaultValue={enEdicion ? enEdicion.costoCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Nota</span>
-          <input name="nota" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="nota" defaultValue={enEdicion?.nota ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
-          Programar mantenimiento
-        </button>
+        <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-5">
+          <button className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {enEdicion ? "Guardar cambios" : "Programar mantenimiento"}
+          </button>
+          {enEdicion && (
+            <a href="?" className="text-sm text-slate-500 hover:underline">Cancelar</a>
+          )}
+        </div>
       </form>
+
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[720px] text-sm">
@@ -110,10 +139,12 @@ export default async function MantenimientoPage() {
                       <button className="rounded-md bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700">Marcar realizado</button>
                     </form>
                   )}
-                  <form action={eliminarMantenimiento} className="inline">
-                    <input type="hidden" name="id" value={m.id} />
-                    <button className="ml-2 text-xs text-red-500 hover:underline">Eliminar</button>
-                  </form>
+                  <div className="flex items-center justify-end gap-3">
+                    {m.estado !== "realizado" && (
+                      <a href={`?editar=${m.id}`} className="text-xs text-sky-600 hover:underline">Editar</a>
+                    )}
+                    <BotonEliminar action={eliminarMantenimiento} id={m.id} />
+                  </div>
                 </td>
               </tr>
             ))}

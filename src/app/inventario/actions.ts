@@ -41,6 +41,22 @@ export async function moverInventario(formData: FormData) {
   revalidatePath("/inventario");
 }
 
+export async function actualizarInsumo(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const nombre = String(formData.get("nombre") || "").trim();
+  if (!nombre) return;
+  await db.insumoInventario.update({
+    where: { id },
+    data: {
+      nombre,
+      unidad: String(formData.get("unidad") || "unidad"),
+      stockMinimo: Number(formData.get("stockMinimo")) || 0,
+    },
+  });
+  revalidatePath("/inventario");
+}
+
 export async function eliminarInsumo(formData: FormData) {
   await db.insumoInventario.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/inventario");

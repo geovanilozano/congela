@@ -2,18 +2,23 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { costoPorBolsa, margenPorBolsa, puntoEquilibrio, recuperacionInversion } from "@/lib/finance/reportes";
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
+import { FiltroFecha } from "@/components/FiltroFecha";
+import { rangoFechas } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
 const CATEGORIAS = ["bolsas", "mantenimiento", "nomina", "transporte", "arriendo", "servicios", "reparaciones", "impuestos", "otro"];
 
-export default async function ReportesPage() {
+export default async function ReportesPage({ searchParams }: { searchParams: Promise<{ desde?: string; hasta?: string }> }) {
+  const sp = await searchParams;
+  const rango = rangoFechas(sp);
+
   const [inversiones, gastos, producciones, ventas, ventaItems, fondos, cierres] = await Promise.all([
     db.inversion.findMany(),
-    db.compraGasto.findMany(),
-    db.produccion.findMany(),
-    db.venta.findMany(),
-    db.ventaItem.findMany(),
+    db.compraGasto.findMany({ where: { fecha: rango } }),
+    db.produccion.findMany({ where: { fecha: rango } }),
+    db.venta.findMany({ where: { fecha: rango } }),
+    db.ventaItem.findMany({ where: { venta: { fecha: rango } } }),
     db.fondo.findMany({ include: { movimientos: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
   ]);
@@ -49,6 +54,8 @@ export default async function ReportesPage() {
           <a href="/api/export?tipo=gastos" className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 hover:bg-slate-50">⬇️ Gastos (Excel)</a>
         </div>
       </div>
+
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
 
       {/* Recuperación de inversión */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
