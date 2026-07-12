@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearVenta, eliminarVenta } from "./actions";
@@ -100,7 +101,10 @@ export default async function VentasPage({
                 <td className={v.formaPago === "credito" ? "text-amber-600" : "text-emerald-600"}>{v.formaPago}</td>
                 <td className="text-right font-medium">{formatMoney(v.totalCents)}</td>
                 <td className="pr-3 text-right">
-                  <BotonEliminar action={eliminarVenta} id={v.id} />
+                  <div className="flex items-center justify-end gap-3">
+                    <Link href={`/ventas/${v.id}/factura`} className="text-xs text-sky-600 hover:underline">Factura</Link>
+                    <BotonEliminar action={eliminarVenta} id={v.id} />
+                  </div>
                 </td>
               </tr>
             ))}

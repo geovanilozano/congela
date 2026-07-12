@@ -28,3 +28,21 @@ h3 {
 .font-display {
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Al imprimir / guardar como PDF: ocultar el menú y los controles, y aprovechar la hoja */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  .contenido-principal {
+    padding: 0 !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  body {
+    background: white !important;
+  }
+}

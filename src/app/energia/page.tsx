@@ -1,8 +1,14 @@
 import { db } from "@/lib/db";
 import { formatMoney, fromCents } from "@/lib/finance/money";
 import { balanceEnergia } from "@/lib/finance/energia";
-import { getAjusteNumero } from "@/lib/ajustes";
-import { guardarPrecioKwh, registrarGeneracion, registrarConsumo } from "./actions";
+import { getAjusteNumero, getAjuste } from "@/lib/ajustes";
+import {
+  guardarPrecioKwh,
+  registrarGeneracion,
+  registrarConsumo,
+  guardarCredencialesGrowatt,
+  sincronizarGrowattAccion,
+} from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +18,12 @@ function fmtFecha(d: Date) {
 }
 
 export default async function EnergiaPage() {
-  const [generaciones, consumos, precioKwhCents] = await Promise.all([
+  const [generaciones, consumos, precioKwhCents, growattUsuario, growattMsg] = await Promise.all([
     db.energiaGeneracion.findMany({ orderBy: { fecha: "desc" } }),
     db.medidorLectura.findMany({ orderBy: { fecha: "desc" } }),
     getAjusteNumero("precioKwhCents", 0),
+    getAjuste("growattUsuario"),
+    getAjuste("growattMsg"),
   ]);
 
   const totalGen = generaciones.reduce((a, g) => a + g.kwh, 0);
@@ -49,6 +57,39 @@ export default async function EnergiaPage() {
         </label>
         <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">Guardar precio</BotonGuardar>
       </form>
+
+      {/* Conexión con Growatt */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+        <h2 className="font-semibold text-amber-700">☀️ Conexión automática con Growatt</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Guarda tu usuario y clave de la app Growatt para traer la generación de los paneles con un
+          clic. {growattUsuario ? <span className="font-medium text-emerald-600">✓ Conectado como {growattUsuario}.</span> : "Aún no has conectado tu cuenta."}
+        </p>
+
+        <form action={guardarCredencialesGrowatt} className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            <span className="text-slate-500">Usuario Growatt</span>
+            <input name="growattUsuario" defaultValue={growattUsuario ?? ""} className="mt-1 w-48 rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-500">Clave Growatt</span>
+            <input name="growattClave" type="password" placeholder="••••••••" className="mt-1 w-48 rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            Guardar cuenta
+          </BotonGuardar>
+        </form>
+
+        <form action={sincronizarGrowattAccion} className="mt-3">
+          <BotonGuardar
+            pendingText="Sincronizando…"
+            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+          >
+            🔄 Sincronizar con Growatt
+          </BotonGuardar>
+        </form>
+        {growattMsg && <p className="mt-2 text-sm text-slate-600">{growattMsg}</p>}
+      </div>
 
       {/* Registrar generación y consumo */}
       <div className="grid gap-4 lg:grid-cols-2">

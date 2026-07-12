@@ -188,6 +188,19 @@ model Ajuste {
 }
 
 // ---------------------------------------------------------------------------
+// Usuarios y roles (login local)
+// ---------------------------------------------------------------------------
+model Usuario {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  usuario      String   @unique
+  passwordHash String
+  rol          String   @default("dueno") // dueno | cajero | operario
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
 // Operación: activos, producción, inventario, compras/gastos
 // ---------------------------------------------------------------------------
 model Activo {
