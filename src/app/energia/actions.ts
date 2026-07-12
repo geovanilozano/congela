@@ -2,8 +2,43 @@
 
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
-import { setAjuste } from "@/lib/ajustes";
+import { setAjuste, getAjuste } from "@/lib/ajustes";
+import { sincronizarGrowatt } from "@/lib/growatt";
 import { revalidatePath } from "next/cache";
+
+export async function guardarCredencialesGrowatt(formData: FormData) {
+  const usuario = String(formData.get("growattUsuario") || "").trim();
+  const clave = String(formData.get("growattClave") || "");
+  if (usuario) await setAjuste("growattUsuario", usuario);
+  if (clave) await setAjuste("growattClave", clave);
+  revalidatePath("/energia");
+}
+
+export async function sincronizarGrowattAccion() {
+  const usuario = (await getAjuste("growattUsuario")) || "";
+  const clave = (await getAjuste("growattClave")) || "";
+  const r = await sincronizarGrowatt(usuario, clave);
+
+  if (r.ok) {
+    // Guardar/actualizar la generación de hoy marcada como "api".
+    const hoy = new Date();
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const yaHoy = await db.energiaGeneracion.findFirst({
+      where: { fuente: "api", fecha: { gte: inicio } },
+    });
+    if (yaHoy) {
+      await db.energiaGeneracion.update({ where: { id: yaHoy.id }, data: { kwh: r.kwhHoy } });
+    } else {
+      await db.energiaGeneracion.create({ data: { kwh: r.kwhHoy, fuente: "api" } });
+    }
+    await setAjuste("growattMsg", `✅ Sincronizado: ${r.kwhHoy} kWh generados hoy.`);
+  } else {
+    await setAjuste("growattMsg", `⚠️ ${r.error}`);
+  }
+
+  revalidatePath("/energia");
+  revalidatePath("/");
+}
 
 export async function guardarPrecioKwh(formData: FormData) {
   const precioPesos = Number(formData.get("precioPesos")) || 0;
