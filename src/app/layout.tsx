@@ -1,6 +1,18 @@
 import type { Metadata } from "next";
+import { Bricolage_Grotesque, Onest } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
+
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["600", "700", "800"],
+});
+
+const body = Onest({
+  subsets: ["latin"],
+  variable: "--font-body",
+});
 
 export const metadata: Metadata = {
   title: "Congela — Control de negocio de hielo",
@@ -13,10 +25,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="h-full antialiased">
+    <html lang="es" className={`h-full antialiased ${display.variable} ${body.variable}`}>
       <body className="min-h-full">
-        <Nav />
-        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
