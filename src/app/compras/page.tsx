@@ -4,7 +4,9 @@ import { crearCompra, eliminarCompra, actualizarCompra } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
+import { Paginacion } from "@/components/Paginacion";
 import { rangoFechas, fechaParaInput } from "@/lib/fechas";
+import { paginar } from "@/lib/paginacion";
 import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
@@ -22,17 +24,33 @@ function fmtFechaInput(d: Date) {
 export default async function ComprasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string; error?: string; ok?: string }>;
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string; error?: string; ok?: string; buscar?: string; pagina?: string }>;
 }) {
   const sp = await searchParams;
   const enEdicion = sp.editar ? await db.compraGasto.findUnique({ where: { id: Number(sp.editar) } }) : null;
-  const gastos = await db.compraGasto.findMany({ where: { fecha: rangoFechas(sp) }, orderBy: { fecha: "desc" } });
-  const total = gastos.reduce((a, g) => a + g.valorCents, 0);
 
-  const porCategoria = CATEGORIAS.map((c) => ({
-    categoria: c,
-    total: gastos.filter((g) => g.categoria === c).reduce((a, g) => a + g.valorCents, 0),
-  })).filter((c) => c.total > 0);
+  // Filtro: rango de fecha + búsqueda por descripción o proveedor.
+  const q = (sp.buscar || "").trim();
+  const where = {
+    fecha: rangoFechas(sp),
+    ...(q ? { OR: [{ descripcion: { contains: q } }, { proveedor: { contains: q } }] } : {}),
+  };
+
+  // Los totales se calculan sobre TODO lo filtrado; la tabla solo trae la página actual.
+  const totalRegistros = await db.compraGasto.count({ where });
+  const pag = paginar(totalRegistros, Number(sp.pagina) || 1);
+
+  const [agg, grupos, gastos] = await Promise.all([
+    db.compraGasto.aggregate({ where, _sum: { valorCents: true } }),
+    db.compraGasto.groupBy({ by: ["categoria"], where, _sum: { valorCents: true } }),
+    db.compraGasto.findMany({ where, orderBy: { fecha: "desc" }, skip: pag.skip, take: pag.take }),
+  ]);
+  const total = agg._sum.valorCents ?? 0;
+
+  const porCategoria = grupos
+    .map((g) => ({ categoria: g.categoria, total: g._sum.valorCents ?? 0 }))
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
 
   return (
     <div className="space-y-6">
@@ -48,6 +66,7 @@ export default async function ComprasPage({
         <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
           <div className="text-xs text-sky-600">Total gastos</div>
           <div className="mt-0.5 text-xl font-bold text-sky-700">{formatMoney(total)}</div>
+          <div className="text-xs text-sky-600">{totalRegistros} registro(s)</div>
         </div>
         {porCategoria.map((c) => (
           <div key={c.categoria} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -68,7 +87,7 @@ export default async function ComprasPage({
         </div>
       )}
 
-      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
+      <FiltroFecha desde={sp.desde} hasta={sp.hasta} buscar={sp.buscar} placeholderBuscar="descripción o proveedor" />
 
       <form
         key={enEdicion?.id ?? "nuevo"}
@@ -126,7 +145,7 @@ export default async function ComprasPage({
             </tr>
           </thead>
           <tbody>
-            {gastos.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin gastos aún.</td></tr>}
+            {gastos.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400">{q ? "Sin resultados para esa búsqueda." : "Sin gastos aún."}</td></tr>}
             {gastos.map((g) => (
               <tr key={g.id} className="border-t border-slate-100">
                 <td className="p-3 text-slate-500">{fmtFecha(g.fecha)}</td>
@@ -150,6 +169,12 @@ export default async function ComprasPage({
           </tbody>
         </table>
       </div>
+
+      <Paginacion
+        paginaActual={pag.paginaActual}
+        totalPaginas={pag.totalPaginas}
+        params={{ buscar: sp.buscar, desde: sp.desde, hasta: sp.hasta }}
+      />
     </div>
   );
 }
