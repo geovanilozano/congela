@@ -8,7 +8,7 @@
 const CAMPOS_FECHA = new Set([
   "createdAt", "fecha", "fechaCompra", "fechaIngreso", "fechaInicio",
   "fechaProgramada", "fechaRealizada", "fechaVencimiento", "garantiaHasta",
-  "periodoFin", "periodoInicio",
+  "periodoFin", "periodoInicio", "pagadaEn",
 ]);
 
 type Fila = Record<string, unknown>;

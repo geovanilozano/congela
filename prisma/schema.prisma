@@ -125,6 +125,11 @@ model Venta {
   fecha      DateTime    @default(now())
   totalCents Int
   formaPago  String      @default("contado") // "contado" | "credito"
+  // Cobro del fiado: una venta a crédito nace por cobrar (pagada=false) hasta que el
+  // cliente paga. El contado nace pagado. Es contabilidad de cuentas por cobrar; no
+  // cambia el reparto del dinero (el fiado ya entra al cierre).
+  pagada     Boolean     @default(false)
+  pagadaEn   DateTime?
   fotoUrl    String?
   items      VentaItem[]
   cierreId   Int?

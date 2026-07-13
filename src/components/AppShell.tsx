@@ -47,6 +47,7 @@ const grupos: Grupo[] = [
       { href: "/credito", label: "Crédito", icon: "💳" },
       { href: "/fondos", label: "Fondos", icon: "🪙" },
       { href: "/ventas", label: "Ventas", icon: "🧾" },
+      { href: "/clientes", label: "Clientes", icon: "🧑‍🤝‍🧑" },
       { href: "/caja", label: "Caja", icon: "🔒" },
       { href: "/compras", label: "Gastos", icon: "💸" },
     ],

@@ -32,6 +32,8 @@ export async function crearVenta(formData: FormData) {
       clienteId,
       totalCents: subtotalCents,
       formaPago,
+      // El contado nace pagado; el fiado nace por cobrar hasta que el cliente pague.
+      pagada: formaPago === "contado",
       items: {
         create: [{ descripcion, cantidad, precioUnitCents, subtotalCents }],
       },
@@ -42,6 +44,20 @@ export async function crearVenta(formData: FormData) {
   revalidatePath("/caja");
   revalidatePath("/");
   redirect("/ventas?ok=1");
+}
+
+/**
+ * Registra que un cliente pagó una venta a crédito (fiado). Solo cierra la cuenta por
+ * cobrar; no mueve dinero, porque el fiado ya entró al cierre de caja.
+ */
+export async function registrarPagoCliente(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const venta = await db.venta.findUnique({ where: { id } });
+  if (!venta || venta.formaPago !== "credito" || venta.pagada) return;
+
+  await db.venta.update({ where: { id }, data: { pagada: true, pagadaEn: new Date() } });
+  revalidatePath("/clientes");
+  revalidatePath("/");
 }
 
 export async function eliminarVenta(formData: FormData) {
