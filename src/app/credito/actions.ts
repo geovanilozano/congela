@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { generarAmortizacion } from "@/lib/finance/amortizacion";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 function sumarMeses(base: Date, meses: number): Date {
   const d = new Date(base);
@@ -15,10 +16,13 @@ export async function crearCredito(formData: FormData) {
   const entidad = String(formData.get("entidad") || "");
   const montoPesos = Number(formData.get("montoPesos")) || 0;
   const tasaMensualPct = Number(formData.get("tasaMensualPct")) || 0;
-  const numCuotas = Number(formData.get("numCuotas")) || 1;
-  const fechaInicio = formData.get("fechaInicio")
-    ? new Date(String(formData.get("fechaInicio")))
-    : new Date();
+  // Al menos 1 cuota entera: un número negativo o con decimales generaría una tabla vacía
+  // o cuotas infinitas (el input tiene min="1", pero un POST directo podría saltárselo).
+  const numCuotas = Math.max(1, Math.floor(Number(formData.get("numCuotas")) || 1));
+  const fechaInicio = fechaLocalODefecto(formData.get("fechaInicio"));
+
+  // Sin monto no hay crédito que amortizar.
+  if (montoPesos <= 0) return;
 
   const montoCents = toCents(montoPesos);
   const tasaMensual = tasaMensualPct / 100;

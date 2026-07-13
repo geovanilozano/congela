@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { fechaLocal, fechaLocalODefecto } from "@/lib/fechas";
 
 export async function crearEmpleado(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();
@@ -13,7 +14,7 @@ export async function crearEmpleado(formData: FormData) {
       cargo: String(formData.get("cargo") || "") || null,
       telefono: String(formData.get("telefono") || "") || null,
       salarioCents: toCents(Number(formData.get("salarioPesos")) || 0),
-      fechaIngreso: formData.get("fechaIngreso") ? new Date(String(formData.get("fechaIngreso"))) : null,
+      fechaIngreso: fechaLocal(String(formData.get("fechaIngreso") ?? "")),
     },
   });
   revalidatePath("/personal");
@@ -31,7 +32,7 @@ export async function actualizarEmpleado(formData: FormData) {
       cargo: String(formData.get("cargo") || "") || null,
       telefono: String(formData.get("telefono") || "") || null,
       salarioCents: toCents(Number(formData.get("salarioPesos")) || 0),
-      fechaIngreso: formData.get("fechaIngreso") ? new Date(String(formData.get("fechaIngreso"))) : null,
+      fechaIngreso: fechaLocal(String(formData.get("fechaIngreso") ?? "")),
     },
   });
   revalidatePath("/personal");
@@ -42,7 +43,7 @@ export async function registrarAsistencia(formData: FormData) {
   await db.asistencia.create({
     data: {
       empleadoId,
-      fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
+      fecha: fechaLocalODefecto(formData.get("fecha")),
       turno: String(formData.get("turno") || "") || null,
       estado: String(formData.get("estado") || "presente"),
     },

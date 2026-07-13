@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { guardarFoto } from "@/lib/upload";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 export async function crearCompra(formData: FormData) {
   const descripcion = String(formData.get("descripcion") || "").trim();
@@ -15,7 +16,7 @@ export async function crearCompra(formData: FormData) {
       descripcion,
       proveedor: String(formData.get("proveedor") || "") || null,
       valorCents: toCents(Number(formData.get("valorPesos")) || 0),
-      fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
+      fecha: fechaLocalODefecto(formData.get("fecha")),
       fotoUrl,
     },
   });
@@ -35,7 +36,7 @@ export async function actualizarCompra(formData: FormData) {
       descripcion,
       proveedor: String(formData.get("proveedor") || "") || null,
       valorCents: toCents(Number(formData.get("valorPesos")) || 0),
-      fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
+      fecha: fechaLocalODefecto(formData.get("fecha")),
     },
   });
   revalidatePath("/compras");

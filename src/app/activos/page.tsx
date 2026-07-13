@@ -3,6 +3,7 @@ import { formatMoney, fromCents } from "@/lib/finance/money";
 import { crearActivo, actualizarActivo, eliminarActivo } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ function fmtFecha(d: Date | null) {
 }
 
 function fmtFechaInput(d: Date | null) {
-  return d ? new Date(d).toISOString().slice(0, 10) : "";
+  return fechaParaInput(d);
 }
 
 export default async function ActivosPage({

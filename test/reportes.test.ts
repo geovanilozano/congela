@@ -11,12 +11,18 @@ describe("reportes financieros", () => {
     expect(costoPorBolsa(1_000_000, 500)).toBe(2000); // 1.000.000 / 500 = 2000 centavos
   });
 
-  it("costo por bolsa es 0 si no hay bolsas", () => {
-    expect(costoPorBolsa(1_000_000, 0)).toBe(0);
+  it("costo por bolsa es null (indefinido) si no hay producción", () => {
+    // Antes devolvía 0, y eso hacía que el margen y el punto de equilibrio se vieran
+    // como si el negocio fuera 100% rentable en un mes sin producción cargada.
+    expect(costoPorBolsa(1_000_000, 0)).toBeNull();
   });
 
   it("margen por bolsa es precio de venta menos costo", () => {
     expect(margenPorBolsa(3000, 2000)).toBe(1000);
+  });
+
+  it("margen por bolsa es null si el costo es indefinido", () => {
+    expect(margenPorBolsa(3000, null)).toBeNull();
   });
 
   it("punto de equilibrio: bolsas necesarias para cubrir los gastos", () => {

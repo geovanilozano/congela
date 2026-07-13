@@ -44,14 +44,27 @@ npm run dev
 
 Luego abrir http://localhost:3000
 
+La primera vez, la app pide crear el usuario **Dueño** (el que ve y edita todo).
+
 ## Pruebas
 
 ```bash
 npm test
 ```
 
+## Antes de publicarlo en internet
+
+- **`AUTH_SECRET` es obligatoria.** Es la clave con que se firman las sesiones. Si se
+  deja la de ejemplo, cualquiera podría entrar como Dueño. Genera una con
+  `openssl rand -base64 32`. En producción la app se niega a funcionar sin ella.
+- Las **fotos de facturas** se guardan en la carpeta privada `archivos/` (no en `public/`)
+  y se sirven por `/api/archivo`, que exige sesión. Esa carpeta hay que respaldarla junto
+  con la base de datos.
+- Las fechas se manejan en la **hora local del negocio**. Si el servidor queda en otra
+  zona horaria, ponle `TZ=America/Bogota`.
+
 ## Estado del proyecto
 
-Las 5 fases del plan (ver `PLAN.md`) están construidas. Pendiente opcional:
-conexión automática al inversor solar, exportar a PDF, lectura de facturas por
-foto (OCR), inicio de sesión con roles y publicación en internet.
+Las 5 fases del plan (ver `PLAN.md`) están construidas, incluyendo login con roles,
+exportar a PDF, OCR de facturas y conexión con Growatt. Pendiente opcional: alertas de
+consumo/temperatura en vivo y publicación en internet.

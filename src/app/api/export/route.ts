@@ -1,22 +1,38 @@
 import { db } from "@/lib/db";
 import { fromCents } from "@/lib/finance/money";
+import { getSesion } from "@/lib/auth/session";
+import { fechaParaInput as fecha } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
-function toCsv(rows: (string | number)[][]): string {
-  return rows
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-    .join("\r\n");
+/**
+ * Excel trata como fórmula cualquier celda de TEXTO que empiece por = + - o @: al abrir
+ * el archivo la ejecutaría. Se le antepone una comilla para que la lea como texto.
+ * Los números se dejan intactos (si no, un valor negativo dejaría de sumar en Excel).
+ */
+function celdaSegura(valor: string | number): string {
+  if (typeof valor === "number") return `"${valor}"`;
+  const peligrosa = /^[=+\-@\t\r]/.test(valor);
+  return `"${(peligrosa ? `'${valor}` : valor).replace(/"/g, '""')}"`;
 }
 
-function fecha(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
+function toCsv(rows: (string | number)[][]): string {
+  return rows.map((r) => r.map(celdaSegura).join(",")).join("\r\n");
 }
 
 export async function GET(request: Request) {
+  const sesion = await getSesion();
+  if (!sesion) return new Response("Necesitas iniciar sesión.", { status: 401 });
+
   const tipo = new URL(request.url).searchParams.get("tipo") ?? "ventas";
+
+  // El respaldo se lleva TODA la base de datos (incluidos sueldos y usuarios): solo el dueño.
+  if (tipo === "respaldo" && sesion.rol !== "dueno") {
+    return new Response("Solo el dueño puede descargar el respaldo completo.", { status: 403 });
+  }
+
   let rows: (string | number)[][] = [];
-  let nombre = tipo;
+  const nombre = tipo;
 
   if (tipo === "ventas") {
     const ventas = await db.venta.findMany({ include: { cliente: true, items: true }, orderBy: { fecha: "asc" } });

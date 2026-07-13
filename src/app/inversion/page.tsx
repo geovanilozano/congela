@@ -3,6 +3,7 @@ import { formatMoney } from "@/lib/finance/money";
 import { crearInversion, eliminarInversion, actualizarInversion } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha</span>
-          <input name="fecha" type="date" defaultValue={enEdicion ? new Date(enEdicion.fecha).toISOString().slice(0, 10) : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fecha" type="date" defaultValue={fechaParaInput(enEdicion?.fecha) || undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         {enEdicion ? (
           <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">

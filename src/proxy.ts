@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { verificar, COOKIE_SESION } from "@/lib/auth/token";
+import { COOKIE_SESION } from "@/lib/auth/token";
+import { sesionValida } from "@/lib/auth/dal";
 import { puedeAcceder } from "@/lib/auth/permisos";
 
 // Se ejecuta antes de renderizar cada ruta: exige sesión y respeta los permisos por rol.
+// La sesión se valida contra la base de datos, así un usuario desactivado queda fuera
+// de inmediato aunque su cookie siga siendo válida.
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const sesion = await verificar(req.cookies.get(COOKIE_SESION)?.value);
+  const sesion = await sesionValida(req.cookies.get(COOKIE_SESION)?.value);
 
   // Sin sesión -> al login.
   if (!sesion) {

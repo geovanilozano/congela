@@ -3,20 +3,27 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { setAjuste } from "@/lib/ajustes";
+import { exigirDueno } from "@/lib/auth/guard";
+import { ROLES } from "@/lib/auth/permisos";
 import { revalidatePath } from "next/cache";
 
 export async function guardarClaveOcr(formData: FormData) {
+  await exigirDueno();
   const clave = String(formData.get("anthropicApiKey") || "").trim();
   if (clave) await setAjuste("anthropicApiKey", clave);
   revalidatePath("/ajustes");
 }
 
 export async function crearUsuario(formData: FormData) {
+  await exigirDueno();
   const nombre = String(formData.get("nombre") || "").trim();
   const usuario = String(formData.get("usuario") || "").trim().toLowerCase();
   const clave = String(formData.get("clave") || "");
   const rol = String(formData.get("rol") || "operario");
   if (!nombre || !usuario || clave.length < 4) return;
+  // El rol tiene que ser uno de los conocidos: un valor inválido dejaría al usuario sin
+  // acceso a ninguna ruta (y con la cookie puesta, en un bucle de redirección).
+  if (!ROLES.some((r) => r.valor === rol)) return;
 
   const existe = await db.usuario.findUnique({ where: { usuario } });
   if (existe) return; // usuario repetido: no hacer nada
@@ -26,6 +33,7 @@ export async function crearUsuario(formData: FormData) {
 }
 
 export async function eliminarUsuario(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   // No dejar la app sin ningún dueño.
   const u = await db.usuario.findUnique({ where: { id } });
@@ -41,6 +49,7 @@ export async function eliminarUsuario(formData: FormData) {
 // Borra todos los datos de operación (deja la estructura de fondos).
 // Útil para quitar los datos de demostración y empezar limpio.
 export async function borrarDatosDemo() {
+  await exigirDueno();
   // Orden hijo -> padre para respetar las llaves foráneas.
   await db.movimientoFondo.deleteMany();
   await db.movimientoInventario.deleteMany();

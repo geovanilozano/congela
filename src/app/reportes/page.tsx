@@ -32,8 +32,8 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const utilidadCents = fondos.find((f) => f.nombre === "Utilidad")?.movimientos.reduce((a, m) => a + m.montoCents, 0) ?? 0;
 
   const precioPromedioCents = bolsasVendidas > 0 ? Math.round(ingresosCents / bolsasVendidas) : 0;
-  const costoBolsaCents = costoPorBolsa(gastosCents, bolsasProducidas);
-  const margenCents = margenPorBolsa(precioPromedioCents, costoBolsaCents);
+  const costoBolsaCents = costoPorBolsa(gastosCents, bolsasProducidas); // null si no hubo producción
+  const margenCents = margenPorBolsa(precioPromedioCents, costoBolsaCents); // null si el costo es indefinido
   const puntoEq = puntoEquilibrio(gastosCents, margenCents);
   const roi = recuperacionInversion(invertidoCents, utilidadCents);
   const utilidadNeta = ingresosCents - gastosCents;
@@ -81,9 +81,17 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
       {/* Indicadores clave */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Costo real por bolsa" valor={formatMoney(costoBolsaCents)} extra={`${bolsasProducidas} bolsas producidas`} />
+        <Kpi
+          label="Costo real por bolsa"
+          valor={costoBolsaCents === null ? "—" : formatMoney(costoBolsaCents)}
+          extra={costoBolsaCents === null ? "sin producción en el rango" : `${bolsasProducidas} bolsas producidas`}
+        />
         <Kpi label="Precio promedio de venta" valor={formatMoney(precioPromedioCents)} extra={`${bolsasVendidas} bolsas vendidas`} />
-        <Kpi label="Margen por bolsa" valor={formatMoney(margenCents)} color={margenCents >= 0 ? "text-emerald-600" : "text-red-600"} />
+        <Kpi
+          label="Margen por bolsa"
+          valor={margenCents === null ? "—" : formatMoney(margenCents)}
+          color={margenCents === null ? undefined : margenCents >= 0 ? "text-emerald-600" : "text-red-600"}
+        />
         <Kpi
           label="Punto de equilibrio"
           valor={puntoEq === null ? "—" : `${puntoEq} bolsas`}

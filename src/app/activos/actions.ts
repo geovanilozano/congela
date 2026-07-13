@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { fechaLocal } from "@/lib/fechas";
 
 export async function crearActivo(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();
@@ -11,7 +12,7 @@ export async function crearActivo(formData: FormData) {
   const costoCents = toCents(Number(formData.get("costoPesos")) || 0);
   const proveedor = String(formData.get("proveedor") || "") || null;
   const formaPago = String(formData.get("formaPago") || "credito");
-  const fechaCompra = formData.get("fechaCompra") ? new Date(String(formData.get("fechaCompra"))) : null;
+  const fechaCompra = fechaLocal(String(formData.get("fechaCompra") ?? ""));
 
   const activo = await db.activo.create({
     data: {
@@ -22,7 +23,7 @@ export async function crearActivo(formData: FormData) {
       consumoKwh: formData.get("consumoKwh") ? Number(formData.get("consumoKwh")) : null,
       costoCents,
       fechaCompra,
-      garantiaHasta: formData.get("garantiaHasta") ? new Date(String(formData.get("garantiaHasta"))) : null,
+      garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
       estado: String(formData.get("estado") || "activo"),
       ubicacion: String(formData.get("ubicacion") || "") || null,
     },
@@ -58,7 +59,7 @@ export async function actualizarActivo(formData: FormData) {
   const costoCents = toCents(Number(formData.get("costoPesos")) || 0);
   const proveedor = String(formData.get("proveedor") || "") || null;
   const formaPago = String(formData.get("formaPago") || "credito");
-  const fechaCompra = formData.get("fechaCompra") ? new Date(String(formData.get("fechaCompra"))) : null;
+  const fechaCompra = fechaLocal(String(formData.get("fechaCompra") ?? ""));
 
   await db.activo.update({
     where: { id },
@@ -70,7 +71,7 @@ export async function actualizarActivo(formData: FormData) {
       consumoKwh: formData.get("consumoKwh") ? Number(formData.get("consumoKwh")) : null,
       costoCents,
       fechaCompra,
-      garantiaHasta: formData.get("garantiaHasta") ? new Date(String(formData.get("garantiaHasta"))) : null,
+      garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
       estado: String(formData.get("estado") || "activo"),
       ubicacion: String(formData.get("ubicacion") || "") || null,
     },

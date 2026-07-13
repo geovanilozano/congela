@@ -18,9 +18,20 @@ export interface ReglaFondo {
 
 export type Reparto = Record<string, number>;
 
-export function repartir(ingresoCents: number, reglas: ReglaFondo[]): Reparto {
+export interface ResultadoReparto {
+  /** Cuánto le toca a cada fondo. */
+  porFondo: Reparto;
+  /**
+   * Dinero que quedó sin dueño porque no hay ningún fondo "resto" activo.
+   * Debe ser 0. Si no lo es, quien llama tiene que avisar: el dinero NO se descarta
+   * en silencio (antes se perdía aquí).
+   */
+  sinAsignarCents: number;
+}
+
+export function repartirDetallado(ingresoCents: number, reglas: ReglaFondo[]): ResultadoReparto {
   const activas = reglas.filter((r) => r.activo).sort((a, b) => a.prioridad - b.prioridad);
-  const reparto: Reparto = {};
+  const porFondo: Reparto = {};
   let restante = ingresoCents;
 
   for (const r of activas) {
@@ -31,11 +42,21 @@ export function repartir(ingresoCents: number, reglas: ReglaFondo[]): Reparto {
     } else if (r.tipo === "porcentaje") {
       monto = Math.min(Math.round(ingresoCents * (r.valor ?? 0)), restante);
     }
-    reparto[r.fondo] = monto;
+    porFondo[r.fondo] = monto;
     restante -= monto;
   }
 
   const resto = activas.find((r) => r.tipo === "resto");
-  if (resto) reparto[resto.fondo] = restante;
-  return reparto;
+  if (resto) {
+    porFondo[resto.fondo] = restante;
+    return { porFondo, sinAsignarCents: 0 };
+  }
+
+  // Sin fondo "resto" activo: el sobrante se devuelve para que el cierre lo reclame.
+  return { porFondo, sinAsignarCents: restante };
+}
+
+/** Igual que `repartirDetallado`, pero devuelve solo el reparto por fondo. */
+export function repartir(ingresoCents: number, reglas: ReglaFondo[]): Reparto {
+  return repartirDetallado(ingresoCents, reglas).porFondo;
 }

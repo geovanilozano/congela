@@ -3,7 +3,7 @@ import { crearProduccion, eliminarProduccion, actualizarProduccion } from "./act
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
-import { rangoFechas } from "@/lib/fechas";
+import { rangoFechas, fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ function fmtFecha(d: Date) {
 }
 
 function fmtFechaInput(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
+  return fechaParaInput(d);
 }
 
 export default async function ProduccionPage({

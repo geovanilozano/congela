@@ -8,10 +8,16 @@ export const ROLES: { valor: Rol; etiqueta: string }[] = [
   { valor: "operario", etiqueta: "Operario (producción e inventario)" },
 ];
 
+// Rutas de apoyo que necesita cualquiera que haya iniciado sesión:
+// ver la foto de un comprobante y leer una factura por foto desde su propia pantalla.
+const COMUNES = ["/api/archivo", "/api/ocr"];
+
 const PERMISOS: Record<string, string[] | "*"> = {
   dueno: "*",
-  cajero: ["/", "/reportes", "/ventas", "/caja", "/compras"],
-  operario: ["/", "/produccion", "/inventario", "/mantenimiento"],
+  // El cajero exporta ventas y gastos desde Reportes (el respaldo completo es solo del dueño:
+  // eso lo comprueba la propia ruta /api/export).
+  cajero: ["/", "/reportes", "/ventas", "/caja", "/compras", "/api/export", ...COMUNES],
+  operario: ["/", "/produccion", "/inventario", "/mantenimiento", ...COMUNES],
 };
 
 /** True si el rol puede acceder a esa ruta. */

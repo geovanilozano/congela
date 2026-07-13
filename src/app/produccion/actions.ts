@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 export async function crearProduccion(formData: FormData) {
   // Bolsas y pérdidas son unidades enteras: se redondean para no romper la base de datos.
@@ -10,7 +11,7 @@ export async function crearProduccion(formData: FormData) {
   const empleadoRaw = formData.get("empleadoId");
   await db.produccion.create({
     data: {
-      fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
+      fecha: fechaLocalODefecto(formData.get("fecha")),
       turno: String(formData.get("turno") || "") || null,
       tipo: String(formData.get("tipo") || "cubo"),
       bolsas,
@@ -34,7 +35,7 @@ export async function actualizarProduccion(formData: FormData) {
   await db.produccion.update({
     where: { id },
     data: {
-      fecha: formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date(),
+      fecha: fechaLocalODefecto(formData.get("fecha")),
       turno: String(formData.get("turno") || "") || null,
       tipo: String(formData.get("tipo") || "cubo"),
       bolsas,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { repartir, ReglaFondo } from "../src/lib/finance/fondos";
+import { repartir, repartirDetallado, ReglaFondo } from "../src/lib/finance/fondos";
 
 const reglas: ReglaFondo[] = [
   { fondo: "arriendo", tipo: "fijo", valorCents: 30_000, prioridad: 1, activo: true },
@@ -32,5 +32,28 @@ describe("repartir", () => {
     expect(r.arriendo).toBe(25_000);
     expect(r.credito ?? 0).toBe(0);
     expect(r.utilidad ?? 0).toBe(0);
+  });
+});
+
+describe("repartirDetallado — el dinero nunca se pierde", () => {
+  it("avisa del sobrante cuando NO hay ningún fondo 'resto' activo", () => {
+    // El dueño desactivó Utilidad: el sobrante no tiene dónde caer.
+    const sinResto = reglas.map((x) => (x.tipo === "resto" ? { ...x, activo: false } : x));
+    const { porFondo, sinAsignarCents } = repartirDetallado(100_000, sinResto);
+
+    const repartido = Object.values(porFondo).reduce((a, b) => a + b, 0);
+
+    // 30.000 + 20.000 + 10% = 60.000 repartidos. Los otros 40.000 NO pueden evaporarse.
+    expect(repartido).toBe(60_000);
+    expect(sinAsignarCents).toBe(40_000);
+    expect(repartido + sinAsignarCents).toBe(100_000);
+  });
+
+  it("no queda sobrante cuando hay un fondo 'resto' activo", () => {
+    const { porFondo, sinAsignarCents } = repartirDetallado(100_000, reglas);
+    const repartido = Object.values(porFondo).reduce((a, b) => a + b, 0);
+
+    expect(sinAsignarCents).toBe(0);
+    expect(repartido).toBe(100_000);
   });
 });

@@ -3,6 +3,7 @@ import { formatMoney, fromCents } from "@/lib/finance/money";
 import { crearEmpleado, registrarAsistencia, registrarPago, eliminarEmpleado, actualizarEmpleado } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
           <input
             name="fechaIngreso"
             type="date"
-            defaultValue={enEdicion?.fechaIngreso ? new Date(enEdicion.fechaIngreso).toISOString().slice(0, 10) : undefined}
+            defaultValue={fechaParaInput(enEdicion?.fechaIngreso) || undefined}
             className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
           />
         </label>

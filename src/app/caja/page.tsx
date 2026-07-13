@@ -11,8 +11,14 @@ function fmtFecha(d: Date) {
   return new Date(d).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export default async function CajaPage() {
+export default async function CajaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   await ensureFondos();
+
+  const { error } = await searchParams;
 
   const ventas = await db.venta.findMany({ where: { cierreId: null } });
   const totalPendiente = ventas.reduce((a, v) => a + v.totalCents, 0);
@@ -46,6 +52,18 @@ export default async function CajaPage() {
           fondos. Así se aparta el arriendo, la cuota del crédito, la reserva y la utilidad.
         </p>
       </div>
+
+      {error === "sinResto" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se cerró la caja.</strong> Parte del dinero quedaría sin fondo donde caer,
+          y no se descarta plata en silencio. Entra a{" "}
+          <a href="/fondos" className="font-semibold underline">
+            Fondos
+          </a>{" "}
+          y activa un fondo de tipo <em>Resto (utilidad)</em>: ahí es donde entra lo que sobra
+          después de apartar el arriendo, la cuota y la reserva.
+        </div>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">

@@ -1,6 +1,8 @@
 // Manejo de la cookie de sesión (solo en servidor: usa next/headers).
 import { cookies } from "next/headers";
-import { firmar, verificar, COOKIE_SESION, type Sesion } from "./token";
+import { cache } from "react";
+import { firmar, COOKIE_SESION, DURACION_SESION_SEG, type Sesion } from "./token";
+import { sesionValida } from "./dal";
 
 export async function crearSesion(sesion: Sesion) {
   const token = await firmar(sesion);
@@ -8,15 +10,21 @@ export async function crearSesion(sesion: Sesion) {
   store.set(COOKIE_SESION, token, {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production", // por HTTPS cuando esté publicada
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 días
+    maxAge: DURACION_SESION_SEG,
   });
 }
 
-export async function getSesion(): Promise<Sesion | null> {
+/**
+ * La sesión de quien está usando la app, verificada contra la base de datos.
+ * `cache` hace que, aunque varias partes de la página la pidan, solo se consulte una
+ * vez por petición.
+ */
+export const getSesion = cache(async (): Promise<Sesion | null> => {
   const token = (await cookies()).get(COOKIE_SESION)?.value;
-  return verificar(token);
-}
+  return sesionValida(token);
+});
 
 export async function cerrarSesion() {
   (await cookies()).delete(COOKIE_SESION);

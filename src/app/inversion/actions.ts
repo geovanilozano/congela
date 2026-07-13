@@ -3,13 +3,14 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 export async function crearInversion(formData: FormData) {
   const descripcion = String(formData.get("descripcion") || "");
   const proveedor = String(formData.get("proveedor") || "");
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   const formaPago = String(formData.get("formaPago") || "credito");
-  const fecha = formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date();
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
 
   if (!descripcion) return;
 
@@ -39,7 +40,7 @@ export async function actualizarInversion(formData: FormData) {
   const proveedor = String(formData.get("proveedor") || "");
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   const formaPago = String(formData.get("formaPago") || "credito");
-  const fecha = formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date();
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
 
   if (!descripcion) return;
 

@@ -2,12 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { puedeAcceder } from "@/lib/auth/permisos";
 import { cerrarSesionAccion } from "@/app/login/actions";
 
 type Item = { href: string; label: string; icon: string };
 type Grupo = { titulo: string | null; items: Item[] };
+
+// --- Preferencia "menú lateral colapsado", guardada en el navegador -----------
+// Se lee con useSyncExternalStore (y no con un efecto que llame a setState) para
+// que React la tome bien en el primer pintado, sin renders en cascada.
+const CLAVE_COLAPSADO = "sidebar-colapsado";
+const oyentes = new Set<() => void>();
+
+function suscribir(cb: () => void) {
+  oyentes.add(cb);
+  return () => {
+    oyentes.delete(cb);
+  };
+}
+
+const leerColapsado = () => localStorage.getItem(CLAVE_COLAPSADO) === "1";
+
+// En el servidor no hay navegador: se pinta el menú desplegado.
+const leerColapsadoEnServidor = () => false;
+
+function guardarColapsado(valor: boolean) {
+  localStorage.setItem(CLAVE_COLAPSADO, valor ? "1" : "0");
+  for (const cb of oyentes) cb();
+}
 
 const grupos: Grupo[] = [
   {
@@ -60,25 +83,15 @@ const etiquetaRol: Record<string, string> = { dueno: "Dueño", cajero: "Cajero",
 export function AppShell({ children, rol, nombre }: { children: React.ReactNode; rol: string; nombre: string }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false); // menú móvil (drawer)
-  const [colapsado, setColapsado] = useState(false); // sidebar oculto en escritorio
+
+  // Sidebar oculto en escritorio: la preferencia vive en el navegador.
+  const colapsado = useSyncExternalStore(suscribir, leerColapsado, leerColapsadoEnServidor);
+  const setColapsado = guardarColapsado;
 
   // Solo los grupos/ítems que el rol puede usar.
   const gruposVisibles = grupos
     .map((g) => ({ ...g, items: g.items.filter((i) => puedeAcceder(rol, i.href)) }))
     .filter((g) => g.items.length > 0);
-
-  // Recordar la preferencia de sidebar cerrado/abierto.
-  useEffect(() => {
-    setColapsado(localStorage.getItem("sidebar-colapsado") === "1");
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("sidebar-colapsado", colapsado ? "1" : "0");
-  }, [colapsado]);
-
-  // Cerrar el menú móvil al cambiar de página.
-  useEffect(() => {
-    setAbierto(false);
-  }, [pathname]);
 
   return (
     <div className="min-h-screen">
@@ -140,6 +153,8 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
                     <Link
                       key={item.href}
                       href={item.href}
+                      // Al navegar se cierra el menú móvil (antes se hacía con un efecto).
+                      onClick={() => setAbierto(false)}
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
                         activo
                           ? "bg-sky-50 font-medium text-sky-700"

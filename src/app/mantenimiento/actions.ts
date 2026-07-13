@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 export async function crearMantenimiento(formData: FormData) {
   const descripcion = String(formData.get("descripcion") || "").trim();
@@ -13,9 +14,7 @@ export async function crearMantenimiento(formData: FormData) {
       descripcion,
       tipo: String(formData.get("tipo") || "preventivo"),
       activoId: activoRaw ? Number(activoRaw) || null : null,
-      fechaProgramada: formData.get("fechaProgramada")
-        ? new Date(String(formData.get("fechaProgramada")))
-        : new Date(),
+      fechaProgramada: fechaLocalODefecto(formData.get("fechaProgramada")),
       costoCents: toCents(Number(formData.get("costoPesos")) || 0),
       nota: String(formData.get("nota") || "") || null,
     },
@@ -35,9 +34,7 @@ export async function actualizarMantenimiento(formData: FormData) {
       descripcion,
       tipo: String(formData.get("tipo") || "preventivo"),
       activoId: activoRaw ? Number(activoRaw) || null : null,
-      fechaProgramada: formData.get("fechaProgramada")
-        ? new Date(String(formData.get("fechaProgramada")))
-        : new Date(),
+      fechaProgramada: fechaLocalODefecto(formData.get("fechaProgramada")),
       costoCents: toCents(Number(formData.get("costoPesos")) || 0),
       nota: String(formData.get("nota") || "") || null,
     },

@@ -5,6 +5,7 @@ import { toCents } from "@/lib/finance/money";
 import { setAjuste, getAjuste } from "@/lib/ajustes";
 import { sincronizarGrowatt } from "@/lib/growatt";
 import { revalidatePath } from "next/cache";
+import { fechaLocalODefecto } from "@/lib/fechas";
 
 export async function guardarCredencialesGrowatt(formData: FormData) {
   const usuario = String(formData.get("growattUsuario") || "").trim();
@@ -49,7 +50,7 @@ export async function guardarPrecioKwh(formData: FormData) {
 
 export async function registrarGeneracion(formData: FormData) {
   const kwh = Number(formData.get("kwh")) || 0;
-  const fecha = formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date();
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
   if (kwh <= 0) return;
   await db.energiaGeneracion.create({ data: { kwh, fecha } });
   revalidatePath("/energia");
@@ -58,7 +59,7 @@ export async function registrarGeneracion(formData: FormData) {
 
 export async function registrarConsumo(formData: FormData) {
   const kwh = Number(formData.get("kwh")) || 0;
-  const fecha = formData.get("fecha") ? new Date(String(formData.get("fecha"))) : new Date();
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
   if (kwh <= 0) return;
   await db.medidorLectura.create({ data: { kwh, fecha } });
   revalidatePath("/energia");

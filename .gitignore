@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...menos la plantilla, que sí se versiona (el README pide copiarla)
+!.env.example
 
 # vercel
 .vercel
@@ -47,6 +49,11 @@ next-env.d.ts
 *.db-journal
 prisma/dev.db*
 
-# fotos de recibos/facturas subidas (local)
+# fotos de recibos/facturas subidas: carpeta PRIVADA, se sirven por /api/archivo
+/archivos
+# (carpeta antigua, cuando las fotos eran públicas)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# artefactos de pruebas con navegador
+/.playwright-mcp
