@@ -2,8 +2,9 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { repartir, ReglaFondo } from "@/lib/finance/fondos";
 import { ensureFondos } from "@/lib/seed";
-import { cerrarCaja } from "./actions";
+import { cerrarCaja, anularUltimoCierre } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { BotonEliminar } from "@/components/BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -100,11 +101,22 @@ export default async function CajaPage({
         <h2 className="mb-3 text-lg font-semibold text-slate-700">Cierres anteriores</h2>
         {cierres.length === 0 && <p className="text-sm text-slate-400">Aún no has cerrado ninguna caja.</p>}
         <div className="space-y-3">
-          {cierres.map((c) => (
+          {cierres.map((c, idx) => (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-slate-700">Cierre #{c.id} · {fmtFecha(c.fecha)}</span>
-                <span className="font-bold text-slate-800">{formatMoney(c.totalCents)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-slate-800">{formatMoney(c.totalCents)}</span>
+                  {/* Solo se puede anular el más reciente (el primero de la lista). */}
+                  {idx === 0 && (
+                    <BotonEliminar
+                      action={anularUltimoCierre}
+                      mensaje="¿Anular este cierre? Las ventas volverán a quedar pendientes y se revertirá el reparto en los fondos."
+                    >
+                      Anular
+                    </BotonEliminar>
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {c.movimientos.map((m) => (

@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { repartirDetallado, ReglaFondo } from "@/lib/finance/fondos";
+import { exigirRol } from "@/lib/auth/guard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -68,6 +69,33 @@ export async function cerrarCaja() {
 
   // El redirect va fuera de la transacción (por dentro la abortaría).
   if (resultado.estado === "sinResto") redirect("/caja?error=sinResto");
+
+  revalidatePath("/caja");
+  revalidatePath("/fondos");
+  revalidatePath("/");
+}
+
+/**
+ * Anula el ÚLTIMO cierre de caja: revierte todo lo que hizo.
+ * Las ventas de ese cierre vuelven a quedar pendientes y se borran los movimientos que
+ * repartieron el dinero en los fondos (así los saldos vuelven a como estaban). Sirve
+ * cuando se cerró por error o con una venta equivocada. Solo el último, para no enredar
+ * cierres anteriores.
+ */
+export async function anularUltimoCierre() {
+  await exigirRol("dueno", "cajero");
+
+  await db.$transaction(async (tx) => {
+    const ultimo = await tx.cierreCaja.findFirst({ orderBy: { id: "desc" } });
+    if (!ultimo) return;
+
+    // Las ventas vuelven a estar pendientes de cierre.
+    await tx.venta.updateMany({ where: { cierreId: ultimo.id }, data: { cierreId: null } });
+    // Se borran los movimientos que repartieron ese dinero (revierte los saldos de fondos).
+    await tx.movimientoFondo.deleteMany({ where: { cierreId: ultimo.id } });
+    // Y se borra el cierre en sí.
+    await tx.cierreCaja.delete({ where: { id: ultimo.id } });
+  });
 
   revalidatePath("/caja");
   revalidatePath("/fondos");
