@@ -59,7 +59,10 @@ model CuotaAmortizacion {
   capitalCents    Int
   interesCents    Int
   saldoCents      Int
-  estado          String       @default("pendiente") // "pendiente" | "pagada" | "vencida"
+  // Cuánto se ha abonado de esta cuota (permite pagos parciales). Cuando llega a
+  // cuotaCents, la cuota queda "pagada".
+  abonadoCents    Int          @default(0)
+  estado          String       @default("pendiente") // "pendiente" | "parcial" | "pagada" | "vencida"
   pago            PagoCredito?
 }
 

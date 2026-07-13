@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { generarAmortizacion } from "@/lib/finance/amortizacion";
+import { distribuirAbono } from "@/lib/finance/abonos";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
@@ -65,46 +66,53 @@ export async function crearCredito(formData: FormData) {
   revalidatePath("/fondos");
 }
 
+/**
+ * Registra un abono al crédito. El monto puede ser una cuota completa, menos (abono
+ * parcial) o más (adelanta varias cuotas). Se reparte de la cuota más vieja a la más
+ * nueva. Si con el abono quedan todas las cuotas pagadas, el crédito se marca PAGADO y
+ * el fondo "Crédito" se desactiva (esa plata pasa a utilidad).
+ */
 export async function registrarPago(formData: FormData) {
-  const cuotaId = Number(formData.get("cuotaId"));
-  const cuota = await db.cuotaAmortizacion.findUnique({ where: { id: cuotaId } });
-  if (!cuota || cuota.estado === "pagada") return;
+  const creditoId = Number(formData.get("creditoId"));
+  const montoCents = toCents(Number(formData.get("montoPesos")) || 0);
+  if (!creditoId || montoCents <= 0) redirect(`/credito?error=abono`);
 
-  await db.cuotaAmortizacion.update({
-    where: { id: cuotaId },
-    data: { estado: "pagada" },
+  // Cuotas aún no pagadas, de la más vieja a la más nueva.
+  const pendientes = await db.cuotaAmortizacion.findMany({
+    where: { creditoId, estado: { not: "pagada" } },
+    orderBy: { numero: "asc" },
+    select: { id: true, cuotaCents: true, abonadoCents: true },
   });
 
-  await db.pagoCredito.create({
-    data: {
-      creditoId: cuota.creditoId,
-      cuotaId: cuota.id,
-      valorCents: cuota.cuotaCents,
-    },
-  });
+  const { actualizaciones } = distribuirAbono(pendientes, montoCents);
+  if (actualizaciones.length === 0) redirect(`/credito?error=abono`);
 
-  // ¿Quedó saldado el crédito? Si todas las cuotas están pagadas -> aplicar regla.
-  const pendientes = await db.cuotaAmortizacion.count({
-    where: { creditoId: cuota.creditoId, estado: { not: "pagada" } },
-  });
+  const aplicadoCents = actualizaciones.reduce(
+    (a, u) => a + (u.abonadoCents - (pendientes.find((c) => c.id === u.id)?.abonadoCents ?? 0)),
+    0,
+  );
 
-  if (pendientes === 0) {
-    await db.credito.update({
-      where: { id: cuota.creditoId },
-      data: { estado: "pagado" },
-    });
-    // Regla automática: el dinero de la cuota deja de apartarse -> pasa a Utilidad.
-    const fondoCredito = await db.fondo.findUnique({
-      where: { nombre: "Crédito" },
-      include: { regla: true },
-    });
-    if (fondoCredito?.regla) {
-      await db.reglaReparto.update({
-        where: { id: fondoCredito.regla.id },
-        data: { activo: false },
+  await db.$transaction(async (tx) => {
+    for (const u of actualizaciones) {
+      await tx.cuotaAmortizacion.update({
+        where: { id: u.id },
+        data: { abonadoCents: u.abonadoCents, estado: u.pagada ? "pagada" : "parcial" },
       });
     }
-  }
+    // Un solo registro de pago por el monto realmente aplicado (sin el sobrante).
+    await tx.pagoCredito.create({ data: { creditoId, valorCents: aplicadoCents } });
+
+    // ¿Quedó saldado el crédito?
+    const faltan = await tx.cuotaAmortizacion.count({ where: { creditoId, estado: { not: "pagada" } } });
+    if (faltan === 0) {
+      await tx.credito.update({ where: { id: creditoId }, data: { estado: "pagado" } });
+      // El dinero de la cuota deja de apartarse -> pasa a utilidad.
+      const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });
+      if (fondoCredito?.regla) {
+        await tx.reglaReparto.update({ where: { id: fondoCredito.regla.id }, data: { activo: false } });
+      }
+    }
+  });
 
   revalidatePath("/credito");
   revalidatePath("/fondos");

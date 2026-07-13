@@ -36,6 +36,11 @@ export default async function CreditoPage({
           <strong>No se creó el crédito.</strong> El monto financiado debe ser mayor que $0.
         </div>
       )}
+      {error === "abono" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se registró el abono.</strong> Escribe un monto mayor que $0.
+        </div>
+      )}
 
       {/* Formulario nuevo crédito */}
       <form
@@ -72,14 +77,15 @@ export default async function CreditoPage({
       )}
 
       {creditos.map((c) => {
-        const pagadas = c.cuotas.filter((q) => q.estado === "pagada");
-        const saldoPendiente = c.cuotas
-          .filter((q) => q.estado !== "pagada")
-          .reduce((a, q) => a + q.capitalCents, 0);
-        const totalPagado = pagadas.reduce((a, q) => a + q.cuotaCents, 0);
+        const totalCredito = c.cuotas.reduce((a, q) => a + q.cuotaCents, 0);
+        const totalPagado = c.cuotas.reduce((a, q) => a + q.abonadoCents, 0);
+        // Saldo pendiente = lo que falta por pagar (cuota menos lo abonado en cada una).
+        const saldoPendiente = totalCredito - totalPagado;
         const totalIntereses = c.cuotas.reduce((a, q) => a + q.interesCents, 0);
-        const avance = Math.round((pagadas.length / c.cuotas.length) * 100);
+        const avance = totalCredito > 0 ? Math.round((totalPagado / totalCredito) * 100) : 0;
         const proxima = c.cuotas.find((q) => q.estado !== "pagada");
+        // Monto sugerido para el abono: lo que falta de la próxima cuota.
+        const sugerido = proxima ? proxima.cuotaCents - proxima.abonadoCents : 0;
 
         return (
           <div key={c.id} className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -146,13 +152,10 @@ export default async function CreditoPage({
                       <td className="text-right">
                         {q.estado === "pagada" ? (
                           <span className="text-emerald-600">Pagada</span>
+                        ) : q.estado === "parcial" ? (
+                          <span className="text-amber-600">Abonado {formatMoney(q.abonadoCents)}</span>
                         ) : (
-                          <form action={registrarPago} className="inline">
-                            <input type="hidden" name="cuotaId" value={q.id} />
-                            <BotonGuardar className="rounded-md bg-slate-800 px-2 py-1 text-xs text-white hover:bg-slate-700">
-                              Registrar pago
-                            </BotonGuardar>
-                          </form>
+                          <span className="text-slate-400">Pendiente</span>
                         )}
                       </td>
                     </tr>
@@ -160,6 +163,28 @@ export default async function CreditoPage({
                 </tbody>
               </table>
             </div>
+
+            {/* Registrar un abono al crédito (cuota completa, parcial o adelantar varias) */}
+            {c.estado !== "pagado" && (
+              <form action={registrarPago} className="flex flex-wrap items-end gap-3 border-t border-slate-100 p-4">
+                <input type="hidden" name="creditoId" value={c.id} />
+                <label className="text-sm">
+                  <span className="text-slate-500">Abonar al crédito ($)</span>
+                  <InputDinero
+                    name="montoPesos"
+                    defaultValue={sugerido / 100}
+                    required
+                    className="mt-1 w-40 rounded-lg border border-slate-300 px-2 py-1.5"
+                  />
+                </label>
+                <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                  Registrar abono
+                </BotonGuardar>
+                <span className="text-xs text-slate-400">
+                  Puedes pagar la cuota completa, menos (abono parcial) o más (adelanta cuotas).
+                </span>
+              </form>
+            )}
           </div>
         );
       })}

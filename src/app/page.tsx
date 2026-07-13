@@ -39,11 +39,12 @@ export default async function Home() {
   const totalInvertido = inversiones.reduce((a, i) => a + i.valorCents, 0);
   const ingresosTotales = cierres.reduce((a, c) => a + c.totalCents, 0);
 
-  // Crédito: saldo pendiente y avance sobre todos los créditos.
+  // Crédito: lo que falta por pagar y el avance, según lo abonado (soporta pagos parciales).
   const todasCuotas = creditos.flatMap((c) => c.cuotas);
-  const saldoCredito = todasCuotas.filter((q) => q.estado !== "pagada").reduce((a, q) => a + q.capitalCents, 0);
-  const pagadas = todasCuotas.filter((q) => q.estado === "pagada").length;
-  const avance = todasCuotas.length ? Math.round((pagadas / todasCuotas.length) * 100) : 0;
+  const totalCredito = todasCuotas.reduce((a, q) => a + q.cuotaCents, 0);
+  const totalAbonado = todasCuotas.reduce((a, q) => a + q.abonadoCents, 0);
+  const saldoCredito = totalCredito - totalAbonado;
+  const avance = totalCredito > 0 ? Math.round((totalAbonado / totalCredito) * 100) : 0;
 
   const saldoFondo = (nombre: string) =>
     fondos.find((f) => f.nombre === nombre)?.movimientos.reduce((a, m) => a + m.montoCents, 0) ?? 0;
