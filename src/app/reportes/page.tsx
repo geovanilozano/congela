@@ -1,10 +1,16 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { costoPorBolsa, margenPorBolsa, puntoEquilibrio, recuperacionInversion } from "@/lib/finance/reportes";
-import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
+import { costoPorBolsa, margenPorBolsa, puntoEquilibrio, recuperacionInversion, resumenPorMes } from "@/lib/finance/reportes";
+import { FondosChart, IngresosChart, TendenciaChart } from "@/components/DashboardCharts";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 import { BotonImprimir } from "@/components/BotonImprimir";
+
+// "AAAA-MM" -> "jul 2026"
+function etiquetaMes(mes: string): string {
+  const [a, m] = mes.split("-").map(Number);
+  return new Date(a, m - 1, 1).toLocaleDateString("es-CO", { month: "short", year: "numeric" });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +20,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const rango = rangoFechas(sp);
 
-  const [inversiones, gastos, producciones, ventas, ventaItems, fondos, cierres] = await Promise.all([
+  const [inversiones, gastos, producciones, ventas, ventaItems, fondos, cierres, ventasTodas, gastosTodos] = await Promise.all([
     db.inversion.findMany(),
     db.compraGasto.findMany({ where: { fecha: rango } }),
     db.produccion.findMany({ where: { fecha: rango } }),
@@ -22,6 +28,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     db.ventaItem.findMany({ where: { venta: { fecha: rango } } }),
     db.fondo.findMany({ include: { movimientos: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
+    // Tendencia: todas las ventas/gastos (sin el filtro de fecha), para ver la historia.
+    db.venta.findMany({ select: { fecha: true, totalCents: true } }),
+    db.compraGasto.findMany({ select: { fecha: true, valorCents: true } }),
   ]);
 
   const invertidoCents = inversiones.reduce((a, i) => a + i.valorCents, 0);
@@ -42,6 +51,17 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     .map((c) => ({ nombre: c, saldo: gastos.filter((g) => g.categoria === c).reduce((a, g) => a + g.valorCents, 0) }))
     .filter((c) => c.saldo > 0);
   const ingresosData = cierres.map((c) => ({ label: `#${c.id}`, total: c.totalCents }));
+
+  // Tendencia mes a mes (últimos 6 meses) para ver si el negocio va mejor o peor.
+  const meses = resumenPorMes(ventasTodas, gastosTodos).slice(-6);
+  const tendenciaData = meses.map((m) => ({ mes: etiquetaMes(m.mes), ingresos: m.ingresosCents, gastos: m.gastosCents }));
+  // Comparación del último mes con el anterior.
+  const ultimo = meses[meses.length - 1];
+  const previo = meses[meses.length - 2];
+  const variacionPct =
+    ultimo && previo && previo.ingresosCents > 0
+      ? Math.round(((ultimo.ingresosCents - previo.ingresosCents) / previo.ingresosCents) * 100)
+      : null;
 
   return (
     <div className="space-y-8">
@@ -101,6 +121,43 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <Kpi label="Gastos totales" valor={formatMoney(gastosCents)} color="text-red-600" />
         <Kpi label="Utilidad neta" valor={formatMoney(utilidadNeta)} color={utilidadNeta >= 0 ? "text-emerald-600" : "text-red-600"} extra="ingresos − gastos" />
         <Kpi label="Total invertido" valor={formatMoney(invertidoCents)} />
+      </div>
+
+      {/* Tendencia mes a mes */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-600">Tendencia mes a mes (ingresos vs gastos)</h2>
+          {variacionPct !== null && (
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${variacionPct >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+              Ventas del último mes {variacionPct >= 0 ? "▲" : "▼"} {Math.abs(variacionPct)}% vs el mes anterior
+            </span>
+          )}
+        </div>
+        <TendenciaChart data={tendenciaData} />
+        {meses.length > 0 && (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="py-1">Mes</th>
+                  <th className="text-right">Ingresos</th>
+                  <th className="text-right">Gastos</th>
+                  <th className="text-right">Utilidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {meses.map((m) => (
+                  <tr key={m.mes} className="border-t border-slate-100">
+                    <td className="py-1.5 capitalize">{etiquetaMes(m.mes)}</td>
+                    <td className="text-right text-emerald-600">{formatMoney(m.ingresosCents)}</td>
+                    <td className="text-right text-red-600">{formatMoney(m.gastosCents)}</td>
+                    <td className={`text-right font-medium ${m.utilidadCents >= 0 ? "text-slate-800" : "text-red-600"}`}>{formatMoney(m.utilidadCents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Gráficos */}

@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos] = await Promise.all([
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -25,6 +25,7 @@ export default async function Home() {
     db.compraGasto.findMany(),
     db.insumoInventario.findMany(),
     db.mantenimiento.findMany(),
+    db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
   ]);
 
   const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
@@ -69,19 +70,36 @@ export default async function Home() {
     gastos.length === 0 &&
     insumos.length === 0;
 
-  // Centro de alertas: cuotas del crédito, inventario y mantenimiento.
+  // Centro de alertas: cuotas del crédito, inventario, mantenimiento y cierre de caja.
   const hoy = new Date();
   const todasLasCuotas = creditos.flatMap((c) => c.cuotas);
-  const cuotasVencidas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida").length;
-  const cuotasProximas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima").length;
+  const cuotasVencidas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida");
+  const cuotasProximas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima");
   const insumosBajos = bajoStock(insumos);
   const mantVencidos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "vencido").length;
   const mantProximos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "proximo").length;
 
+  // Detalle de las cuotas vencidas: cuánto se debe y hace cuántos días vence la más vieja.
+  const montoVencidoCents = cuotasVencidas.reduce((a, q) => a + q.cuotaCents, 0);
+  const masVieja = cuotasVencidas.reduce<Date | null>(
+    (min, q) => (min === null || q.fechaVencimiento < min ? q.fechaVencimiento : min),
+    null,
+  );
+  const diasMora = masVieja ? Math.floor((hoy.getTime() - masVieja.getTime()) / 86_400_000) : 0;
+
+  // Ventas del día sin cerrar: recordar cerrar la caja (es el paso que reparte el dinero).
+  const pendientesCents = ventasPendientes.reduce((a, v) => a + v.totalCents, 0);
+
   const alertas: { nivel: "alta" | "media"; texto: string; href: string }[] = [];
-  if (cuotasVencidas > 0) alertas.push({ nivel: "alta", texto: `${cuotasVencidas} cuota(s) del crédito vencida(s)`, href: "/credito" });
-  if (cuotasProximas > 0) alertas.push({ nivel: "media", texto: `${cuotasProximas} cuota(s) del crédito por vencer`, href: "/credito" });
+  if (cuotasVencidas.length > 0)
+    alertas.push({
+      nivel: "alta",
+      texto: `${cuotasVencidas.length} cuota(s) vencida(s) por ${formatMoney(montoVencidoCents)}${diasMora > 0 ? ` · la más vieja hace ${diasMora} día(s)` : ""}`,
+      href: "/credito",
+    });
+  if (cuotasProximas.length > 0) alertas.push({ nivel: "media", texto: `${cuotasProximas.length} cuota(s) del crédito por vencer`, href: "/credito" });
   if (mantVencidos > 0) alertas.push({ nivel: "alta", texto: `${mantVencidos} mantenimiento(s) vencido(s)`, href: "/mantenimiento" });
+  if (pendientesCents > 0) alertas.push({ nivel: "media", texto: `Tienes ${formatMoney(pendientesCents)} en ventas sin cerrar — recuerda cerrar la caja`, href: "/caja" });
   if (insumosBajos.length > 0) alertas.push({ nivel: "media", texto: `${insumosBajos.length} insumo(s) con bajo stock: ${insumosBajos.map((i) => i.nombre).join(", ")}`, href: "/inventario" });
   if (mantProximos > 0) alertas.push({ nivel: "media", texto: `${mantProximos} mantenimiento(s) próximo(s)`, href: "/mantenimiento" });
 

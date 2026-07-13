@@ -4,6 +4,7 @@ import {
   margenPorBolsa,
   puntoEquilibrio,
   recuperacionInversion,
+  resumenPorMes,
 } from "../src/lib/finance/reportes";
 
 describe("reportes financieros", () => {
@@ -51,5 +52,50 @@ describe("reportes financieros", () => {
     expect(r.porcentaje).toBe(100); // se limita a 100
     expect(r.faltanteCents).toBe(0);
     expect(r.recuperado).toBe(true);
+  });
+});
+
+describe("resumenPorMes", () => {
+  it("agrupa ventas y gastos por mes (hora local) y calcula la utilidad", () => {
+    const ventas = [
+      { fecha: new Date(2026, 5, 10), totalCents: 100_000 }, // junio
+      { fecha: new Date(2026, 5, 20), totalCents: 50_000 }, // junio
+      { fecha: new Date(2026, 6, 3), totalCents: 200_000 }, // julio
+    ];
+    const gastos = [
+      { fecha: new Date(2026, 5, 15), valorCents: 40_000 }, // junio
+      { fecha: new Date(2026, 6, 1), valorCents: 30_000 }, // julio
+    ];
+    const r = resumenPorMes(ventas, gastos);
+
+    expect(r).toEqual([
+      { mes: "2026-06", ingresosCents: 150_000, gastosCents: 40_000, utilidadCents: 110_000 },
+      { mes: "2026-07", ingresosCents: 200_000, gastosCents: 30_000, utilidadCents: 170_000 },
+    ]);
+  });
+
+  it("una venta a las 8pm cuenta en su mes local, no en el siguiente por UTC", () => {
+    // 31 de julio 8pm local no debe caer en agosto.
+    const ventas = [{ fecha: new Date(2026, 6, 31, 20, 0, 0), totalCents: 10_000 }];
+    const r = resumenPorMes(ventas, []);
+    expect(r[0].mes).toBe("2026-07");
+  });
+
+  it("incluye meses con solo gastos", () => {
+    const r = resumenPorMes([], [{ fecha: new Date(2026, 0, 5), valorCents: 5_000 }]);
+    expect(r).toEqual([{ mes: "2026-01", ingresosCents: 0, gastosCents: 5_000, utilidadCents: -5_000 }]);
+  });
+
+  it("devuelve los meses en orden ascendente", () => {
+    const ventas = [
+      { fecha: new Date(2026, 6, 1), totalCents: 1 },
+      { fecha: new Date(2026, 2, 1), totalCents: 1 },
+      { fecha: new Date(2026, 4, 1), totalCents: 1 },
+    ];
+    expect(resumenPorMes(ventas, []).map((m) => m.mes)).toEqual(["2026-03", "2026-05", "2026-07"]);
+  });
+
+  it("sin datos devuelve lista vacía", () => {
+    expect(resumenPorMes([], [])).toEqual([]);
   });
 });

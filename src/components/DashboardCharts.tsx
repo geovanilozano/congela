@@ -34,6 +34,26 @@ export function IngresosChart({ data }: { data: { label: string; total: number }
   );
 }
 
+export function TendenciaChart({
+  data,
+}: {
+  data: { mes: string; ingresos: number; gastos: number }[];
+}) {
+  if (data.length === 0)
+    return <p className="p-6 text-center text-sm text-slate-400">Aún no hay datos por mes.</p>;
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+        <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+        <YAxis tickFormatter={(v) => `${v / 100000}k`} tick={{ fontSize: 11 }} width={40} />
+        <Tooltip formatter={(v, n) => [money(Number(v)), n === "ingresos" ? "Ingresos" : "Gastos"]} />
+        <Bar dataKey="ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function FondosChart({ data }: { data: { nombre: string; saldo: number }[] }) {
   const filtered = data.filter((d) => d.saldo > 0);
   if (filtered.length === 0)
