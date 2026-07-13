@@ -4,6 +4,7 @@ import { crearInversion, eliminarInversion, actualizarInversion } from "./action
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { fechaParaInput } from "@/lib/fechas";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor ($)</span>
-          <input name="valorPesos" type="number" min="0" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="valorPesos" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Forma de pago</span>

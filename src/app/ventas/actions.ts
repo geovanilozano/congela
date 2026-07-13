@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function crearVenta(formData: FormData) {
   const clienteNombre = String(formData.get("clienteNombre") || "").trim();
@@ -11,6 +12,9 @@ export async function crearVenta(formData: FormData) {
   const cantidad = Math.max(1, Math.round(Number(formData.get("cantidad")) || 1));
   const precioPesos = Number(formData.get("precioPesos")) || 0;
   const formaPago = String(formData.get("formaPago") || "contado");
+
+  // Sin precio no hay venta: se avisa en vez de guardar una venta de $0 que descuadra el cierre.
+  if (precioPesos <= 0) redirect("/ventas?error=precio");
 
   const precioUnitCents = toCents(precioPesos);
   const subtotalCents = precioUnitCents * cantidad;
@@ -37,6 +41,7 @@ export async function crearVenta(formData: FormData) {
   revalidatePath("/ventas");
   revalidatePath("/caja");
   revalidatePath("/");
+  redirect("/ventas?ok=1");
 }
 
 export async function eliminarVenta(formData: FormData) {

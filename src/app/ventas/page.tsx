@@ -6,6 +6,7 @@ import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ function fmtFechaHora(d: Date) {
 export default async function VentasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; error?: string; ok?: string }>;
 }) {
   const sp = await searchParams;
   const ventas = await db.venta.findMany({
@@ -36,6 +37,17 @@ export default async function VentasPage({
         </p>
       </div>
 
+      {sp.error === "precio" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se registró la venta.</strong> Falta el precio (debe ser mayor que $0).
+        </div>
+      )}
+      {sp.ok && (
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+          ✓ Venta registrada.
+        </div>
+      )}
+
       <form
         action={crearVenta}
         className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-6"
@@ -50,7 +62,7 @@ export default async function VentasPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Precio unitario ($)</span>
-          <input name="precioPesos" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="precioPesos" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Cliente (opcional)</span>

@@ -14,3 +14,19 @@ export const formatMoney = (cents: number, currency = "COP", locale = "es-CO"): 
   new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(
     fromCents(cents),
   );
+
+/**
+ * Pone separador de miles a un valor en pesos (enteros). Para lo que escribe el usuario:
+ * 1500000 -> "1.500.000". Ignora todo lo que no sea dígito; vacío se queda vacío.
+ */
+export const formatMiles = (valor: string | number): string => {
+  const digitos = String(valor).replace(/\D/g, "");
+  if (digitos === "") return "";
+  return new Intl.NumberFormat("es-CO").format(Number(digitos));
+};
+
+/** Inversa de formatMiles: "1.500.000" -> 1500000. Sin dígitos -> 0. */
+export const parseMiles = (texto: string): number => {
+  const digitos = texto.replace(/\D/g, "");
+  return digitos === "" ? 0 : Number(digitos);
+};

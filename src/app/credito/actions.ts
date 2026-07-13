@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { generarAmortizacion } from "@/lib/finance/amortizacion";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
 
 function sumarMeses(base: Date, meses: number): Date {
@@ -21,8 +22,8 @@ export async function crearCredito(formData: FormData) {
   const numCuotas = Math.max(1, Math.floor(Number(formData.get("numCuotas")) || 1));
   const fechaInicio = fechaLocalODefecto(formData.get("fechaInicio"));
 
-  // Sin monto no hay crédito que amortizar.
-  if (montoPesos <= 0) return;
+  // Sin monto no hay crédito que amortizar: se avisa en vez de salir en silencio.
+  if (montoPesos <= 0) redirect("/credito?error=monto");
 
   const montoCents = toCents(montoPesos);
   const tasaMensual = tasaMensualPct / 100;

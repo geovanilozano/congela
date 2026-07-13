@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { crearCredito, registrarPago } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,12 @@ function fmtFecha(d: Date) {
   return new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default async function CreditoPage() {
+export default async function CreditoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const creditos = await db.credito.findMany({
     include: { cuotas: { orderBy: { numero: "asc" } } },
     orderBy: { id: "desc" },
@@ -25,6 +31,12 @@ export default async function CreditoPage() {
         </p>
       </div>
 
+      {error === "monto" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se creó el crédito.</strong> El monto financiado debe ser mayor que $0.
+        </div>
+      )}
+
       {/* Formulario nuevo crédito */}
       <form
         action={crearCredito}
@@ -36,7 +48,7 @@ export default async function CreditoPage() {
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Monto financiado ($)</span>
-          <input name="montoPesos" type="number" min="0" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="montoPesos" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Tasa mensual (%)</span>

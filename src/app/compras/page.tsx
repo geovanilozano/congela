@@ -5,6 +5,7 @@ import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas, fechaParaInput } from "@/lib/fechas";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ function fmtFechaInput(d: Date) {
 export default async function ComprasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string; error?: string; ok?: string }>;
 }) {
   const sp = await searchParams;
   const enEdicion = sp.editar ? await db.compraGasto.findUnique({ where: { id: Number(sp.editar) } }) : null;
@@ -56,6 +57,17 @@ export default async function ComprasPage({
         ))}
       </div>
 
+      {sp.error === "datos" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se guardó el gasto.</strong> Escribe la descripción y un valor mayor que $0.
+        </div>
+      )}
+      {sp.ok && (
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+          ✓ Gasto guardado.
+        </div>
+      )}
+
       <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
 
       <form
@@ -80,7 +92,7 @@ export default async function ComprasPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor ($)</span>
-          <input name="valorPesos" type="number" min="0" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="valorPesos" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha</span>
