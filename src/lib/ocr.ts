@@ -1,7 +1,7 @@
 // Lee los datos de un recibo/factura a partir de la foto, usando la visión de Claude.
 // La clave de API se configura en Ajustes (o en la variable de entorno ANTHROPIC_API_KEY).
 import Anthropic from "@anthropic-ai/sdk";
-import { getAjuste } from "@/lib/ajustes";
+import { getAjuste, getAjusteSeguro } from "@/lib/ajustes";
 
 export interface DatosRecibo {
   tipo: string | null;
@@ -15,7 +15,7 @@ const TIPOS_VALIDOS = ["energia", "agua", "gas", "internet"];
 export async function leerRecibo(base64: string, mediaType: string): Promise<
   { ok: true; datos: DatosRecibo } | { ok: false; error: string }
 > {
-  const apiKey = (await getAjuste("anthropicApiKey")) || process.env.ANTHROPIC_API_KEY;
+  const apiKey = (await getAjusteSeguro("anthropicApiKey")) || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "Falta configurar la clave de API en Ajustes." };
   }

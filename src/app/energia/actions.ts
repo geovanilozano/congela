@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
-import { setAjuste, getAjuste } from "@/lib/ajustes";
+import { setAjuste, getAjuste, setAjusteSeguro, getAjusteSeguro } from "@/lib/ajustes";
 import { sincronizarGrowatt } from "@/lib/growatt";
 import { revalidatePath } from "next/cache";
 import { fechaLocalODefecto } from "@/lib/fechas";
@@ -11,13 +11,13 @@ export async function guardarCredencialesGrowatt(formData: FormData) {
   const usuario = String(formData.get("growattUsuario") || "").trim();
   const clave = String(formData.get("growattClave") || "");
   if (usuario) await setAjuste("growattUsuario", usuario);
-  if (clave) await setAjuste("growattClave", clave);
+  if (clave) await setAjusteSeguro("growattClave", clave);
   revalidatePath("/energia");
 }
 
 export async function sincronizarGrowattAccion() {
   const usuario = (await getAjuste("growattUsuario")) || "";
-  const clave = (await getAjuste("growattClave")) || "";
+  const clave = (await getAjusteSeguro("growattClave")) || "";
   const r = await sincronizarGrowatt(usuario, clave);
 
   if (r.ok) {

@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { setAjuste } from "@/lib/ajustes";
+import { setAjusteSeguro } from "@/lib/ajustes";
 import { exigirDueno } from "@/lib/auth/guard";
 import { ROLES } from "@/lib/auth/permisos";
 import { revalidatePath } from "next/cache";
@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 export async function guardarClaveOcr(formData: FormData) {
   await exigirDueno();
   const clave = String(formData.get("anthropicApiKey") || "").trim();
-  if (clave) await setAjuste("anthropicApiKey", clave);
+  if (clave) await setAjusteSeguro("anthropicApiKey", clave);
   revalidatePath("/ajustes");
 }
 
@@ -50,35 +50,40 @@ export async function eliminarUsuario(formData: FormData) {
 // Útil para quitar los datos de demostración y empezar limpio.
 export async function borrarDatosDemo() {
   await exigirDueno();
-  // Orden hijo -> padre para respetar las llaves foráneas.
-  await db.movimientoFondo.deleteMany();
-  await db.movimientoInventario.deleteMany();
-  await db.ventaItem.deleteMany();
-  await db.pagoCredito.deleteMany();
-  await db.cuotaAmortizacion.deleteMany();
-  await db.asistencia.deleteMany();
-  await db.pagoNomina.deleteMany();
-  await db.venta.deleteMany();
-  await db.cierreCaja.deleteMany();
-  await db.cliente.deleteMany();
-  await db.inversion.deleteMany();
-  await db.credito.deleteMany();
-  await db.produccion.deleteMany();
-  await db.mantenimiento.deleteMany();
-  await db.activo.deleteMany();
-  await db.empleado.deleteMany();
-  await db.insumoInventario.deleteMany();
-  await db.compraGasto.deleteMany();
-  await db.energiaGeneracion.deleteMany();
-  await db.medidorLectura.deleteMany();
-  await db.reciboServicio.deleteMany();
-  await db.ajuste.deleteMany();
 
-  // Reiniciar la cuota que aparta el fondo "Crédito".
-  const fondoCredito = await db.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });
-  if (fondoCredito?.regla) {
-    await db.reglaReparto.update({ where: { id: fondoCredito.regla.id }, data: { valorCents: 0, activo: true } });
-  }
+  // Todo dentro de una transacción: o se borra todo, o no se borra nada. Así un fallo
+  // a mitad no deja la base con unas tablas vacías y otras no.
+  await db.$transaction(async (tx) => {
+    // Orden hijo -> padre para respetar las llaves foráneas.
+    await tx.movimientoFondo.deleteMany();
+    await tx.movimientoInventario.deleteMany();
+    await tx.ventaItem.deleteMany();
+    await tx.pagoCredito.deleteMany();
+    await tx.cuotaAmortizacion.deleteMany();
+    await tx.asistencia.deleteMany();
+    await tx.pagoNomina.deleteMany();
+    await tx.venta.deleteMany();
+    await tx.cierreCaja.deleteMany();
+    await tx.cliente.deleteMany();
+    await tx.inversion.deleteMany();
+    await tx.credito.deleteMany();
+    await tx.produccion.deleteMany();
+    await tx.mantenimiento.deleteMany();
+    await tx.activo.deleteMany();
+    await tx.empleado.deleteMany();
+    await tx.insumoInventario.deleteMany();
+    await tx.compraGasto.deleteMany();
+    await tx.energiaGeneracion.deleteMany();
+    await tx.medidorLectura.deleteMany();
+    await tx.reciboServicio.deleteMany();
+    await tx.ajuste.deleteMany();
+
+    // Reiniciar la cuota que aparta el fondo "Crédito".
+    const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });
+    if (fondoCredito?.regla) {
+      await tx.reglaReparto.update({ where: { id: fondoCredito.regla.id }, data: { valorCents: 0, activo: true } });
+    }
+  });
 
   revalidatePath("/", "layout");
 }

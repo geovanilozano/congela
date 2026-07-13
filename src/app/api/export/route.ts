@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { fromCents } from "@/lib/finance/money";
 import { getSesion } from "@/lib/auth/session";
 import { fechaParaInput as fecha } from "@/lib/fechas";
+import { CLAVES_SECRETAS } from "@/lib/ajustes";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
       cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
       produccion, activo, empleado, asistencia, pagoNomina, mantenimiento,
-      energiaGeneracion, medidorLectura, reciboServicio, ajuste,
+      energiaGeneracion, medidorLectura, reciboServicio, ajusteTodos,
     ] = await Promise.all([
       db.inversion.findMany(), db.credito.findMany(), db.cuotaAmortizacion.findMany(),
       db.pagoCredito.findMany(), db.fondo.findMany(), db.reglaReparto.findMany(),
@@ -69,6 +70,10 @@ export async function GET(request: Request) {
       db.pagoNomina.findMany(), db.mantenimiento.findMany(), db.energiaGeneracion.findMany(),
       db.medidorLectura.findMany(), db.reciboServicio.findMany(), db.ajuste.findMany(),
     ]);
+    // El respaldo NO debe llevar secretos (clave de Growatt, API key), aunque estén
+    // cifrados: un archivo de respaldo se comparte y se guarda en cualquier lado.
+    const secretas: string[] = [...CLAVES_SECRETAS];
+    const ajuste = ajusteTodos.filter((a) => !secretas.includes(a.clave));
     const respaldo = {
       inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
       cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
