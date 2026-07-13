@@ -8,11 +8,21 @@ export const dynamic = "force-dynamic";
 
 const UNIDADES = ["unidad", "bolsa", "kg", "litro", "paquete"];
 
-export default async function InventarioPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
+export default async function InventarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string; error?: string; insumo?: string; hay?: string }>;
+}) {
   const sp = await searchParams;
   const insumos = await db.insumoInventario.findMany({ orderBy: { nombre: "asc" } });
   const alertas = bajoStock(insumos);
   const enEdicion = sp.editar ? await db.insumoInventario.findUnique({ where: { id: Number(sp.editar) } }) : null;
+
+  // Aviso cuando se intentó sacar más de lo que hay.
+  const insumoSinStock =
+    sp.error === "sinStock" && sp.insumo
+      ? insumos.find((i) => i.id === Number(sp.insumo))
+      : null;
 
   return (
     <div className="space-y-6">
@@ -22,6 +32,14 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
           Controla bolsas, insumos y materiales. El sistema te avisa cuando algo baja del mínimo.
         </p>
       </div>
+
+      {insumoSinStock && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se registró la salida.</strong> No puedes sacar más de lo que hay: de{" "}
+          <b>{insumoSinStock.nombre}</b> solo quedan {insumoSinStock.stock} {insumoSinStock.unidad}.
+          Ajusta la cantidad o registra primero una entrada.
+        </div>
+      )}
 
       {alertas.length > 0 && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

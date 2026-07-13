@@ -1,7 +1,9 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { aplicarMovimiento, type TipoMovimiento } from "@/lib/inventario";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function crearInsumo(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();
@@ -26,18 +28,28 @@ export async function crearInsumo(formData: FormData) {
 export async function moverInventario(formData: FormData) {
   const insumoId = Number(formData.get("insumoId"));
   const cantidad = Number(formData.get("cantidad")) || 0;
-  const tipo = String(formData.get("tipo") || "entrada"); // entrada | salida
-  if (cantidad <= 0) return;
+  const tipo = (String(formData.get("tipo") || "entrada") === "salida" ? "salida" : "entrada") as TipoMovimiento;
 
-  const delta = tipo === "salida" ? -cantidad : cantidad;
   const insumo = await db.insumoInventario.findUnique({ where: { id: insumoId } });
   if (!insumo) return;
 
-  const nuevoStock = Math.max(0, insumo.stock + delta);
-  await db.insumoInventario.update({ where: { id: insumoId }, data: { stock: nuevoStock } });
-  await db.movimientoInventario.create({
-    data: { insumoId, cantidad: delta, concepto: tipo === "salida" ? "Salida" : "Entrada" },
-  });
+  const mov = aplicarMovimiento(insumo.stock, cantidad, tipo);
+
+  // No se puede sacar más de lo que hay: se avisa en vez de descuadrar el libro.
+  if (!mov.ok) {
+    if (mov.razon === "sinStock") {
+      redirect(`/inventario?error=sinStock&insumo=${insumoId}&hay=${mov.disponible}`);
+    }
+    return; // cantidad inválida (0 o negativa): sin efecto
+  }
+
+  // El stock y el movimiento registrado usan el MISMO delta: siempre cuadran.
+  await db.$transaction([
+    db.insumoInventario.update({ where: { id: insumoId }, data: { stock: mov.nuevoStock } }),
+    db.movimientoInventario.create({
+      data: { insumoId, cantidad: mov.delta, concepto: tipo === "salida" ? "Salida" : "Entrada" },
+    }),
+  ]);
   revalidatePath("/inventario");
 }
 
