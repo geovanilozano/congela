@@ -5,7 +5,9 @@ import { hashPassword } from "@/lib/auth/password";
 import { setAjusteSeguro } from "@/lib/ajustes";
 import { exigirDueno } from "@/lib/auth/guard";
 import { ROLES } from "@/lib/auth/permisos";
+import { restaurarRespaldo } from "@/lib/respaldo";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function guardarClaveOcr(formData: FormData) {
   await exigirDueno();
@@ -44,6 +46,29 @@ export async function eliminarUsuario(formData: FormData) {
   }
   await db.usuario.delete({ where: { id } });
   revalidatePath("/ajustes");
+}
+
+// Restaura un respaldo (.json): reemplaza todos los datos actuales por los del archivo.
+export async function restaurarRespaldoAccion(formData: FormData) {
+  await exigirDueno();
+
+  const archivo = formData.get("respaldo");
+  if (!archivo || typeof archivo === "string" || !(archivo as File).size) {
+    redirect("/ajustes?error=sinArchivo");
+  }
+
+  let datos: unknown;
+  try {
+    datos = JSON.parse(await (archivo as File).text());
+  } catch {
+    redirect("/ajustes?error=jsonInvalido");
+  }
+
+  const r = await restaurarRespaldo(datos);
+  if (!r.ok) redirect("/ajustes?error=restauracion");
+
+  revalidatePath("/", "layout");
+  redirect(`/ajustes?restaurado=${r.totalFilas}`);
 }
 
 // Borra todos los datos de operación (deja la estructura de fondos).

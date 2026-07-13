@@ -1,15 +1,27 @@
 import { db } from "@/lib/db";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { SubirRespaldo } from "@/components/SubirRespaldo";
 import { ROLES } from "@/lib/auth/permisos";
 import { getAjuste } from "@/lib/ajustes";
-import { borrarDatosDemo, crearUsuario, eliminarUsuario, guardarClaveOcr } from "./actions";
+import { borrarDatosDemo, crearUsuario, eliminarUsuario, guardarClaveOcr, restaurarRespaldoAccion } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 const etiquetaRol: Record<string, string> = { dueno: "Dueño", cajero: "Cajero", operario: "Operario" };
 
-export default async function AjustesPage() {
+const ERRORES_RESPALDO: Record<string, string> = {
+  sinArchivo: "Primero elige el archivo de respaldo (.json).",
+  jsonInvalido: "Ese archivo no es un respaldo válido (no se pudo leer).",
+  restauracion: "No se pudo restaurar el respaldo. No se cambió ningún dato.",
+};
+
+export default async function AjustesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; restaurado?: string }>;
+}) {
+  const sp = await searchParams;
   const usuarios = await db.usuario.findMany({ orderBy: { id: "asc" } });
   const claveOcr = await getAjuste("anthropicApiKey");
 
@@ -91,6 +103,27 @@ export default async function AjustesPage() {
         >
           ⬇️ Descargar respaldo
         </a>
+
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <h3 className="text-sm font-semibold text-slate-700">Restaurar un respaldo</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Carga un archivo de respaldo para recuperar la información. <b>Reemplaza todos los
+            datos actuales</b> (los usuarios y sus claves se conservan).
+          </p>
+
+          {sp.restaurado && (
+            <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">
+              ✓ Respaldo restaurado ({sp.restaurado} registros).
+            </div>
+          )}
+          {sp.error && ERRORES_RESPALDO[sp.error] && (
+            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {ERRORES_RESPALDO[sp.error]}
+            </div>
+          )}
+
+          <SubirRespaldo action={restaurarRespaldoAccion} />
+        </div>
       </div>
 
       {/* Limpieza */}
