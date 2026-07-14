@@ -1,13 +1,14 @@
 // Guarda la foto de un recibo/factura y devuelve la URL con que se muestra.
 //
-// Los archivos NO van a `public/`: ahí quedarían accesibles para cualquiera en internet
-// que adivine (o filtre) la dirección, sin necesidad de iniciar sesión. Se guardan en una
-// carpeta privada y se sirven por `/api/archivo`, que sí exige sesión.
+// En producción (Vercel) se guarda en Vercel Blob (almacenamiento en la nube), porque el
+// disco del servidor no es permanente. En desarrollo local, si no hay token de Blob, se
+// guarda en una carpeta privada `archivos/` y se sirve por `/api/archivo` (exige sesión).
 import { writeFile, mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { put } from "@vercel/blob";
 
-/** Carpeta privada (fuera de `public/`) donde viven las fotos subidas. */
+/** Carpeta privada (fuera de `public/`) donde viven las fotos en desarrollo local. */
 export const CARPETA_ARCHIVOS = path.join(process.cwd(), "archivos");
 
 /** Solo estas extensiones: son fotos de recibos, no ejecutables. */
@@ -20,11 +21,20 @@ export async function guardarFoto(file: FormDataEntryValue | null): Promise<stri
 
   const ext = path.extname(f.name).toLowerCase();
   const extSegura = EXTENSIONES.has(ext) ? ext : ".jpg";
-
-  await mkdir(CARPETA_ARCHIVOS, { recursive: true });
   const nombre = `${randomUUID()}${extSegura}`;
   const buffer = Buffer.from(await f.arrayBuffer());
-  await writeFile(path.join(CARPETA_ARCHIVOS, nombre), buffer);
 
+  // Producción: Vercel Blob.
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await put(`recibos/${nombre}`, buffer, {
+      access: "public",
+      contentType: f.type || undefined,
+    });
+    return blob.url;
+  }
+
+  // Desarrollo local: carpeta privada servida por /api/archivo.
+  await mkdir(CARPETA_ARCHIVOS, { recursive: true });
+  await writeFile(path.join(CARPETA_ARCHIVOS, nombre), buffer);
   return `/api/archivo?f=${nombre}`;
 }
