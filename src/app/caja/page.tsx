@@ -19,12 +19,21 @@ export default async function CajaPage({
 }) {
   await ensureFondos();
 
-  const { error } = await searchParams;
+  // Las tres consultas son independientes: se lanzan en paralelo (un solo viaje
+  // de ida y vuelta a la base de datos) en vez de una tras otra.
+  const [{ error }, ventas, fondos, cierres] = await Promise.all([
+    searchParams,
+    db.venta.findMany({ where: { cierreId: null } }),
+    db.fondo.findMany({ include: { regla: true } }),
+    db.cierreCaja.findMany({
+      include: { movimientos: { include: { fondo: true } } },
+      orderBy: { id: "desc" },
+      take: 10,
+    }),
+  ]);
 
-  const ventas = await db.venta.findMany({ where: { cierreId: null } });
   const totalPendiente = ventas.reduce((a, v) => a + v.totalCents, 0);
 
-  const fondos = await db.fondo.findMany({ include: { regla: true } });
   const reglas: ReglaFondo[] = fondos
     .filter((f) => f.regla)
     .map((f) => ({
@@ -37,12 +46,6 @@ export default async function CajaPage({
     }));
 
   const preview = repartir(totalPendiente, reglas);
-
-  const cierres = await db.cierreCaja.findMany({
-    include: { movimientos: { include: { fondo: true } } },
-    orderBy: { id: "desc" },
-    take: 10,
-  });
 
   return (
     <div className="space-y-8">
