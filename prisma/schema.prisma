@@ -107,6 +107,10 @@ model MovimientoFondo {
   fecha       DateTime    @default(now())
   cierreId    Int?
   cierre      CierreCaja? @relation(fields: [cierreId], references: [id])
+
+  @@index([fondoId])
+  @@index([cierreId])
+  @@index([fecha])
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +141,10 @@ model Venta {
   items      VentaItem[]
   cierreId   Int?
   cierre     CierreCaja? @relation(fields: [cierreId], references: [id])
+
+  @@index([fecha])
+  @@index([cierreId])
+  @@index([clienteId])
 }
 
 model VentaItem {
@@ -147,6 +155,8 @@ model VentaItem {
   cantidad       Int
   precioUnitCents Int
   subtotalCents  Int
+
+  @@index([ventaId])
 }
 
 model CierreCaja {
@@ -167,6 +177,8 @@ model EnergiaGeneracion {
   kwh       Float // energía generada por los paneles ese día
   fuente    String   @default("manual") // "manual" | "api"
   createdAt DateTime @default(now())
+
+  @@index([fecha])
 }
 
 model MedidorLectura {
@@ -175,6 +187,8 @@ model MedidorLectura {
   kwh       Float // consumo de la empresa ese día
   fuente    String   @default("manual") // "manual" | "api"
   createdAt DateTime @default(now())
+
+  @@index([fecha])
 }
 
 model ReciboServicio {
@@ -187,6 +201,9 @@ model ReciboServicio {
   fotoUrl       String?
   fecha         DateTime @default(now())
   createdAt     DateTime @default(now())
+
+  @@index([fecha])
+  @@index([tipo])
 }
 
 // Ajustes clave/valor del sistema (ej. precio del kWh).
@@ -243,6 +260,10 @@ model Produccion {
   empleado   Empleado? @relation(fields: [empleadoId], references: [id])
   nota       String?
   createdAt  DateTime  @default(now())
+
+  @@index([fecha])
+  @@index([activoId])
+  @@index([empleadoId])
 }
 
 model InsumoInventario {
@@ -262,6 +283,9 @@ model MovimientoInventario {
   cantidad  Float // + entrada, - salida
   concepto  String
   fecha     DateTime         @default(now())
+
+  @@index([insumoId])
+  @@index([fecha])
 }
 
 model CompraGasto {
@@ -273,6 +297,9 @@ model CompraGasto {
   fecha       DateTime @default(now())
   fotoUrl     String?
   createdAt   DateTime @default(now())
+
+  @@index([fecha])
+  @@index([categoria])
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +327,9 @@ model Asistencia {
   turno      String?
   estado     String   @default("presente") // presente | ausente | tarde
   horas      Float?
+
+  @@index([empleadoId])
+  @@index([fecha])
 }
 
 model PagoNomina {
@@ -310,6 +340,9 @@ model PagoNomina {
   valorCents     Int
   concepto       String   @default("Salario")
   comprobanteUrl String?
+
+  @@index([empleadoId])
+  @@index([fecha])
 }
 
 model Mantenimiento {
@@ -324,4 +357,7 @@ model Mantenimiento {
   estado          String    @default("programado") // programado | realizado
   nota            String?
   createdAt       DateTime  @default(now())
+
+  @@index([activoId])
+  @@index([fechaProgramada])
 }
