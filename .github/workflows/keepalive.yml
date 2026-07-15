@@ -1,0 +1,22 @@
+name: Keep Neon awake
+
+# El plan gratis de Neon suspende la base de datos tras ~5 min de inactividad,
+# y el primer clic del usuario paga el arranque en frío. Este workflow hace un
+# ping ligero al endpoint /api/keepalive cada ~5 minutos para mantenerla despierta.
+# (Vercel Hobby no permite cron más frecuente que 1 vez al día; por eso se hace
+# desde GitHub Actions, que es gratis e ilimitado en repositorios públicos.)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # permite dispararlo a mano para probar
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping keepalive endpoint
+        run: |
+          curl -fsS --max-time 30 https://congela.vercel.app/api/keepalive \
+            && echo "keepalive OK" \
+            || (echo "keepalive FALLÓ" && exit 1)
