@@ -27,7 +27,8 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Se aplica a todo menos: /login, archivos internos de Next, /uploads, favicon y archivos con extensión.
+// Se aplica a todo menos: /login, /api/keepalive (ping del cron, sin sesión),
+// archivos internos de Next, /uploads, favicon y archivos con extensión.
 export const config = {
-  matcher: ["/((?!login|_next|uploads|favicon.ico|.*\\.).*)"],
+  matcher: ["/((?!login|api/keepalive|_next|uploads|favicon.ico|.*\\.).*)"],
 };
