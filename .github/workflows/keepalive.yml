@@ -27,5 +27,6 @@ jobs:
             else
               echo "ping $i FALLÓ"
             fi
-            [ "$i" -lt 5 ] && sleep 60
+            if [ "$i" -lt 5 ]; then sleep 60; fi
           done
+          echo "listo"
