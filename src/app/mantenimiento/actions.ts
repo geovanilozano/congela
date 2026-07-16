@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirRol } from "@/lib/auth/guard";
 
 export async function crearMantenimiento(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const descripcion = String(formData.get("descripcion") || "").trim();
   if (!descripcion) return;
   const activoRaw = formData.get("activoId");
@@ -23,6 +25,7 @@ export async function crearMantenimiento(formData: FormData) {
 }
 
 export async function actualizarMantenimiento(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const id = Number(formData.get("id"));
   if (!id) return;
   const descripcion = String(formData.get("descripcion") || "").trim();
@@ -43,6 +46,7 @@ export async function actualizarMantenimiento(formData: FormData) {
 }
 
 export async function marcarRealizado(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const id = Number(formData.get("id"));
   const m = await db.mantenimiento.findUnique({ where: { id } });
   if (!m || m.estado === "realizado") return;
@@ -65,6 +69,7 @@ export async function marcarRealizado(formData: FormData) {
 }
 
 export async function eliminarMantenimiento(formData: FormData) {
+  await exigirRol("dueno", "operario");
   await db.mantenimiento.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/mantenimiento");
 }

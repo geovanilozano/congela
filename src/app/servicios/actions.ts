@@ -5,8 +5,10 @@ import { toCents } from "@/lib/finance/money";
 import { guardarFoto } from "@/lib/upload";
 import { revalidatePath } from "next/cache";
 import { fechaLocal } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function registrarRecibo(formData: FormData) {
+  await exigirDueno();
   const tipo = String(formData.get("tipo") || "energia");
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   const consumo = formData.get("consumo") ? Number(formData.get("consumo")) : null;
@@ -24,6 +26,7 @@ export async function registrarRecibo(formData: FormData) {
 }
 
 export async function actualizarRecibo(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   if (!id) return;
 
@@ -43,6 +46,7 @@ export async function actualizarRecibo(formData: FormData) {
 }
 
 export async function eliminarRecibo(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   await db.reciboServicio.delete({ where: { id } });
   revalidatePath("/servicios");

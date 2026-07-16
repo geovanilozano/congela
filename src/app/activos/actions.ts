@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocal } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function crearActivo(formData: FormData) {
+  await exigirDueno();
   const nombre = String(formData.get("nombre") || "").trim();
   if (!nombre) return;
 
@@ -50,6 +52,7 @@ export async function crearActivo(formData: FormData) {
 }
 
 export async function actualizarActivo(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   if (!id) return;
 
@@ -112,6 +115,7 @@ export async function actualizarActivo(formData: FormData) {
 }
 
 export async function eliminarActivo(formData: FormData) {
+  await exigirDueno();
   // La inversión enlazada se borra en cascada (ver schema.prisma).
   await db.activo.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/activos");

@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function crearInversion(formData: FormData) {
+  await exigirDueno();
   const descripcion = String(formData.get("descripcion") || "");
   const proveedor = String(formData.get("proveedor") || "");
   const valorPesos = Number(formData.get("valorPesos")) || 0;
@@ -29,6 +31,7 @@ export async function crearInversion(formData: FormData) {
 }
 
 export async function actualizarInversion(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   if (!id) return;
 
@@ -60,6 +63,7 @@ export async function actualizarInversion(formData: FormData) {
 }
 
 export async function eliminarInversion(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   const inv = await db.inversion.findUnique({ where: { id } });
   // Si la inversión pertenece a un equipo, se borra desde Activos (no aquí).

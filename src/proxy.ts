@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_SESION } from "@/lib/auth/token";
-import { sesionValida } from "@/lib/auth/dal";
+import { COOKIE_SESION, verificar } from "@/lib/auth/token";
 import { puedeAcceder } from "@/lib/auth/permisos";
 
 // Se ejecuta antes de renderizar cada ruta: exige sesión y respeta los permisos por rol.
-// La sesión se valida contra la base de datos, así un usuario desactivado queda fuera
-// de inmediato aunque su cookie siga siendo válida.
+//
+// Chequeo OPTIMISTA: valida solo la firma del token (sin tocar la base de datos), para
+// que el middleware sea instantáneo en cada navegación. La autorización real —y el
+// bloqueo inmediato de un usuario desactivado— vive en los server actions, que sí
+// consultan la base de datos vía exigirRol/exigirDueno (ver src/lib/auth/guard.ts).
+// Es justo el patrón que recomienda la documentación de Next.js.
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const sesion = await sesionValida(req.cookies.get(COOKIE_SESION)?.value);
+  const sesion = await verificar(req.cookies.get(COOKIE_SESION)?.value);
 
   // Sin sesión -> al login.
   if (!sesion) {

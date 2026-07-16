@@ -6,8 +6,10 @@ import { guardarFoto } from "@/lib/upload";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirRol } from "@/lib/auth/guard";
 
 export async function crearCompra(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   const descripcion = String(formData.get("descripcion") || "").trim();
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   if (!descripcion || valorPesos <= 0) redirect("/compras?error=datos");
@@ -29,6 +31,7 @@ export async function crearCompra(formData: FormData) {
 }
 
 export async function actualizarCompra(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   const id = Number(formData.get("id"));
   if (!id) return;
   const descripcion = String(formData.get("descripcion") || "").trim();
@@ -51,6 +54,7 @@ export async function actualizarCompra(formData: FormData) {
 }
 
 export async function eliminarCompra(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   await db.compraGasto.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/compras");
   revalidatePath("/");

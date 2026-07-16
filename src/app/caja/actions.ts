@@ -31,6 +31,7 @@ function aReglas(
  * entraba a los fondos.
  */
 export async function cerrarCaja() {
+  await exigirRol("dueno", "cajero");
   const resultado = await db.$transaction(async (tx) => {
     const ventas = await tx.venta.findMany({ where: { cierreId: null } });
     if (ventas.length === 0) return { estado: "sinVentas" as const };

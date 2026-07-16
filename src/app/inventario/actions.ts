@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { aplicarMovimiento, type TipoMovimiento } from "@/lib/inventario";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { exigirRol } from "@/lib/auth/guard";
 
 export async function crearInsumo(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const nombre = String(formData.get("nombre") || "").trim();
   if (!nombre) return;
   const stock = Number(formData.get("stock")) || 0;
@@ -26,6 +28,7 @@ export async function crearInsumo(formData: FormData) {
 }
 
 export async function moverInventario(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const insumoId = Number(formData.get("insumoId"));
   const cantidad = Number(formData.get("cantidad")) || 0;
   const tipo = (String(formData.get("tipo") || "entrada") === "salida" ? "salida" : "entrada") as TipoMovimiento;
@@ -54,6 +57,7 @@ export async function moverInventario(formData: FormData) {
 }
 
 export async function actualizarInsumo(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const id = Number(formData.get("id"));
   if (!id) return;
   const nombre = String(formData.get("nombre") || "").trim();
@@ -70,6 +74,7 @@ export async function actualizarInsumo(formData: FormData) {
 }
 
 export async function eliminarInsumo(formData: FormData) {
+  await exigirRol("dueno", "operario");
   await db.insumoInventario.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/inventario");
 }

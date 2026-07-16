@@ -3,8 +3,10 @@
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function guardarRegla(formData: FormData) {
+  await exigirDueno();
   const reglaId = Number(formData.get("reglaId"));
   const tipo = String(formData.get("tipo")); // "fijo" | "porcentaje" | "resto"
   const activo = formData.get("activo") === "on";

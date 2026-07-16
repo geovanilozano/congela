@@ -7,6 +7,7 @@ import { distribuirAbono } from "@/lib/finance/abonos";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 function sumarMeses(base: Date, meses: number): Date {
   const d = new Date(base);
@@ -15,6 +16,7 @@ function sumarMeses(base: Date, meses: number): Date {
 }
 
 export async function crearCredito(formData: FormData) {
+  await exigirDueno();
   const entidad = String(formData.get("entidad") || "");
   const montoPesos = Number(formData.get("montoPesos")) || 0;
   const tasaMensualPct = Number(formData.get("tasaMensualPct")) || 0;
@@ -73,6 +75,7 @@ export async function crearCredito(formData: FormData) {
  * el fondo "Crédito" se desactiva (esa plata pasa a utilidad).
  */
 export async function registrarPago(formData: FormData) {
+  await exigirDueno();
   const creditoId = Number(formData.get("creditoId"));
   const montoCents = toCents(Number(formData.get("montoPesos")) || 0);
   if (!creditoId || montoCents <= 0) redirect(`/credito?error=abono`);

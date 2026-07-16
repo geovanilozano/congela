@@ -6,8 +6,10 @@ import { setAjuste, getAjuste, setAjusteSeguro, getAjusteSeguro } from "@/lib/aj
 import { sincronizarGrowatt } from "@/lib/growatt";
 import { revalidatePath } from "next/cache";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function guardarCredencialesGrowatt(formData: FormData) {
+  await exigirDueno();
   const usuario = String(formData.get("growattUsuario") || "").trim();
   const clave = String(formData.get("growattClave") || "");
   if (usuario) await setAjuste("growattUsuario", usuario);
@@ -16,6 +18,7 @@ export async function guardarCredencialesGrowatt(formData: FormData) {
 }
 
 export async function sincronizarGrowattAccion() {
+  await exigirDueno();
   const usuario = (await getAjuste("growattUsuario")) || "";
   const clave = (await getAjusteSeguro("growattClave")) || "";
   const r = await sincronizarGrowatt(usuario, clave);
@@ -42,6 +45,7 @@ export async function sincronizarGrowattAccion() {
 }
 
 export async function guardarPrecioKwh(formData: FormData) {
+  await exigirDueno();
   const precioPesos = Number(formData.get("precioPesos")) || 0;
   await setAjuste("precioKwhCents", String(toCents(precioPesos)));
   revalidatePath("/energia");
@@ -49,6 +53,7 @@ export async function guardarPrecioKwh(formData: FormData) {
 }
 
 export async function registrarGeneracion(formData: FormData) {
+  await exigirDueno();
   const kwh = Number(formData.get("kwh")) || 0;
   const fecha = fechaLocalODefecto(formData.get("fecha"));
   if (kwh <= 0) return;
@@ -58,6 +63,7 @@ export async function registrarGeneracion(formData: FormData) {
 }
 
 export async function registrarConsumo(formData: FormData) {
+  await exigirDueno();
   const kwh = Number(formData.get("kwh")) || 0;
   const fecha = fechaLocalODefecto(formData.get("fecha"));
   if (kwh <= 0) return;

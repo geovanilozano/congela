@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocal, fechaLocalODefecto } from "@/lib/fechas";
+import { exigirDueno } from "@/lib/auth/guard";
 
 export async function crearEmpleado(formData: FormData) {
+  await exigirDueno();
   const nombre = String(formData.get("nombre") || "").trim();
   if (!nombre) return;
   await db.empleado.create({
@@ -21,6 +23,7 @@ export async function crearEmpleado(formData: FormData) {
 }
 
 export async function actualizarEmpleado(formData: FormData) {
+  await exigirDueno();
   const id = Number(formData.get("id"));
   if (!id) return;
   const nombre = String(formData.get("nombre") || "").trim();
@@ -39,6 +42,7 @@ export async function actualizarEmpleado(formData: FormData) {
 }
 
 export async function registrarAsistencia(formData: FormData) {
+  await exigirDueno();
   const empleadoId = Number(formData.get("empleadoId"));
   await db.asistencia.create({
     data: {
@@ -52,6 +56,7 @@ export async function registrarAsistencia(formData: FormData) {
 }
 
 export async function registrarPago(formData: FormData) {
+  await exigirDueno();
   const empleadoId = Number(formData.get("empleadoId"));
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   if (valorPesos <= 0) return;
@@ -66,6 +71,7 @@ export async function registrarPago(formData: FormData) {
 }
 
 export async function eliminarEmpleado(formData: FormData) {
+  await exigirDueno();
   await db.empleado.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/personal");
 }

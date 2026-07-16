@@ -3,8 +3,10 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { fechaLocalODefecto } from "@/lib/fechas";
+import { exigirRol } from "@/lib/auth/guard";
 
 export async function crearProduccion(formData: FormData) {
+  await exigirRol("dueno", "operario");
   // Bolsas y pérdidas son unidades enteras: se redondean para no romper la base de datos.
   const bolsas = Math.max(0, Math.round(Number(formData.get("bolsas")) || 0));
   const activoRaw = formData.get("activoId");
@@ -26,6 +28,7 @@ export async function crearProduccion(formData: FormData) {
 }
 
 export async function actualizarProduccion(formData: FormData) {
+  await exigirRol("dueno", "operario");
   const id = Number(formData.get("id"));
   if (!id) return;
   // Bolsas y pérdidas son unidades enteras: se redondean para no romper la base de datos.
@@ -50,6 +53,7 @@ export async function actualizarProduccion(formData: FormData) {
 }
 
 export async function eliminarProduccion(formData: FormData) {
+  await exigirRol("dueno", "operario");
   await db.produccion.delete({ where: { id: Number(formData.get("id")) } });
   revalidatePath("/produccion");
 }

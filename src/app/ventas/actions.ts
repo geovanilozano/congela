@@ -4,8 +4,10 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { exigirRol } from "@/lib/auth/guard";
 
 export async function crearVenta(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   const clienteNombre = String(formData.get("clienteNombre") || "").trim();
   const descripcion = String(formData.get("descripcion") || "Hielo");
   // Las bolsas son unidades enteras: se redondea para no romper la base de datos.
@@ -51,6 +53,7 @@ export async function crearVenta(formData: FormData) {
  * cobrar; no mueve dinero, porque el fiado ya entró al cierre de caja.
  */
 export async function registrarPagoCliente(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   const id = Number(formData.get("id"));
   const venta = await db.venta.findUnique({ where: { id } });
   if (!venta || venta.formaPago !== "credito" || venta.pagada) return;
@@ -61,6 +64,7 @@ export async function registrarPagoCliente(formData: FormData) {
 }
 
 export async function eliminarVenta(formData: FormData) {
+  await exigirRol("dueno", "cajero");
   const id = Number(formData.get("id"));
   const venta = await db.venta.findUnique({ where: { id } });
   if (venta?.cierreId) return; // no borrar ventas ya cerradas en caja
