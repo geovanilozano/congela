@@ -2,9 +2,18 @@
 
 import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
+import { fechaLocalODefecto } from "@/lib/fechas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { exigirRol } from "@/lib/auth/guard";
+
+// Liga la venta a un cliente por nombre: usa el existente o crea uno mínimo (solo nombre).
+// Los datos completos del cliente se gestionan en la sección Clientes.
+async function resolverClienteId(nombre: string, formaPago: string): Promise<number | null> {
+  if (!nombre) return null;
+  const existente = await db.cliente.findFirst({ where: { nombre } });
+  return existente ? existente.id : (await db.cliente.create({ data: { nombre, tipo: formaPago } })).id;
+}
 
 export async function crearVenta(formData: FormData) {
   await exigirRol("dueno", "cajero");
@@ -14,29 +23,74 @@ export async function crearVenta(formData: FormData) {
   const cantidad = Math.max(1, Math.round(Number(formData.get("cantidad")) || 1));
   const precioPesos = Number(formData.get("precioPesos")) || 0;
   const formaPago = String(formData.get("formaPago") || "contado");
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
 
   // Sin precio no hay venta: se avisa en vez de guardar una venta de $0 que descuadra el cierre.
   if (precioPesos <= 0) redirect("/ventas?error=precio");
 
   const precioUnitCents = toCents(precioPesos);
   const subtotalCents = precioUnitCents * cantidad;
-
-  let clienteId: number | null = null;
-  if (clienteNombre) {
-    const existente = await db.cliente.findFirst({ where: { nombre: clienteNombre } });
-    clienteId = existente
-      ? existente.id
-      : (await db.cliente.create({ data: { nombre: clienteNombre, tipo: formaPago } })).id;
-  }
+  const clienteId = await resolverClienteId(clienteNombre, formaPago);
 
   await db.venta.create({
     data: {
       clienteId,
+      fecha,
       totalCents: subtotalCents,
       formaPago,
       // El contado nace pagado; el fiado nace por cobrar hasta que el cliente pague.
       pagada: formaPago === "contado",
       items: {
+        create: [{ descripcion, cantidad, precioUnitCents, subtotalCents }],
+      },
+    },
+  });
+
+  revalidatePath("/ventas");
+  revalidatePath("/caja");
+  revalidatePath("/");
+  redirect("/ventas?ok=1");
+}
+
+/**
+ * Edita una venta ya registrada (fecha, producto, cantidad, precio, cliente, forma de pago).
+ * No toca ventas ya cerradas en caja, para no descuadrar los fondos.
+ */
+export async function actualizarVenta(formData: FormData) {
+  await exigirRol("dueno", "cajero");
+  const id = Number(formData.get("id"));
+  const venta = await db.venta.findUnique({ where: { id } });
+  if (!venta || venta.cierreId) return; // no se editan ventas ya repartidas en fondos
+
+  const clienteNombre = String(formData.get("clienteNombre") || "").trim();
+  const descripcion = String(formData.get("descripcion") || "Hielo");
+  const cantidad = Math.max(1, Math.round(Number(formData.get("cantidad")) || 1));
+  const precioPesos = Number(formData.get("precioPesos")) || 0;
+  const formaPago = String(formData.get("formaPago") || "contado");
+  const fecha = fechaLocalODefecto(formData.get("fecha"));
+
+  if (precioPesos <= 0) redirect(`/ventas?editar=${id}&error=precio`);
+
+  const precioUnitCents = toCents(precioPesos);
+  const subtotalCents = precioUnitCents * cantidad;
+  const clienteId = await resolverClienteId(clienteNombre, formaPago);
+
+  // Contado = pagada (sin fecha de cobro). Crédito = conserva si el fiado ya estaba cobrado.
+  const esContado = formaPago === "contado";
+  const pagada = esContado ? true : venta.pagada;
+  const pagadaEn = esContado ? null : venta.pagadaEn;
+
+  await db.venta.update({
+    where: { id },
+    data: {
+      clienteId,
+      fecha,
+      totalCents: subtotalCents,
+      formaPago,
+      pagada,
+      pagadaEn,
+      items: {
+        deleteMany: {}, // se reemplaza el único ítem por el editado
         create: [{ descripcion, cantidad, precioUnitCents, subtotalCents }],
       },
     },

@@ -120,6 +120,8 @@ model Cliente {
   id        Int      @id @default(autoincrement())
   nombre    String
   telefono  String?
+  cedula    String?
+  correo    String?
   tipo      String   @default("contado") // "contado" | "credito"
   ventas    Venta[]
   createdAt DateTime @default(now())
