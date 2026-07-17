@@ -5,6 +5,7 @@ import { resumenClientes } from "@/lib/clientes";
 import { registrarPagoCliente } from "../ventas/actions";
 import { crearCliente, actualizarCliente } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { enlaceWhatsApp } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,14 @@ export default async function ClientesPage({
         {resumen.map((c) => {
           const raw = clientes.find((cl) => cl.id === c.id);
           const pendientes = pendientesDe(c.id);
+          // Recordatorio de cobro por WhatsApp: solo si te debe y tiene teléfono.
+          const waLink =
+            c.porCobrarCents > 0 && raw?.telefono
+              ? enlaceWhatsApp(
+                  raw.telefono,
+                  `Hola ${c.nombre} 👋, te recordamos tu saldo pendiente con Congela: ${formatMoney(c.porCobrarCents)}. ¡Gracias por tu compra! 🧊`,
+                )
+              : null;
           return (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -127,6 +136,17 @@ export default async function ClientesPage({
                       {formatMoney(c.porCobrarCents)}
                     </div>
                   </div>
+                  {waLink && (
+                    <a
+                      href={waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Recordar el saldo por WhatsApp"
+                      className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                    >
+                      Recordar 💬
+                    </a>
+                  )}
                   <Link
                     href={`/clientes?editar=${c.id}`}
                     className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
