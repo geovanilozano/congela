@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { setAjusteSeguro } from "@/lib/ajustes";
+import { setAjuste, setAjusteSeguro } from "@/lib/ajustes";
 import { exigirDueno } from "@/lib/auth/guard";
 import { ROLES } from "@/lib/auth/permisos";
 import { restaurarRespaldo } from "@/lib/respaldo";
@@ -13,6 +13,16 @@ export async function guardarClaveOcr(formData: FormData) {
   await exigirDueno();
   const clave = String(formData.get("anthropicApiKey") || "").trim();
   if (clave) await setAjusteSeguro("anthropicApiKey", clave);
+  revalidatePath("/ajustes");
+}
+
+// Datos del negocio que salen en la factura (encabezado). Todos opcionales.
+export async function guardarDatosNegocio(formData: FormData) {
+  await exigirDueno();
+  const campos = ["negocioNombre", "negocioNit", "negocioDireccion", "negocioTelefono"] as const;
+  for (const c of campos) {
+    await setAjuste(c, String(formData.get(c) || "").trim());
+  }
   revalidatePath("/ajustes");
 }
 

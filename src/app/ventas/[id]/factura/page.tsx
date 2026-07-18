@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/finance/money";
+import { getAjuste } from "@/lib/ajustes";
 import { BotonImprimir } from "@/components/BotonImprimir";
 
 export const dynamic = "force-dynamic";
@@ -12,11 +13,17 @@ function fmtFecha(d: Date) {
 
 export default async function FacturaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const venta = await db.venta.findUnique({
-    where: { id: Number(id) },
-    include: { cliente: true, items: true },
-  });
+  const [venta, negNombre, negNit, negDir, negTel] = await Promise.all([
+    db.venta.findUnique({ where: { id: Number(id) }, include: { cliente: true, items: true } }),
+    getAjuste("negocioNombre"),
+    getAjuste("negocioNit"),
+    getAjuste("negocioDireccion"),
+    getAjuste("negocioTelefono"),
+  ]);
   if (!venta) notFound();
+
+  const nombreNegocio = negNombre?.trim() || "Congela";
+  const cli = venta.cliente;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -31,9 +38,16 @@ export default async function FacturaPage({ params }: { params: Promise<{ id: st
         <div className="flex items-start justify-between border-b border-slate-200 pb-5">
           <div>
             <div className="flex items-center gap-2 font-display text-2xl font-bold text-slate-800">
-              <span>🧊</span> Congela
+              <span>🧊</span> {nombreNegocio}
             </div>
             <div className="text-sm text-slate-500">Producción y venta de hielo</div>
+            {(negNit || negDir || negTel) && (
+              <div className="mt-1 space-y-0.5 text-xs text-slate-400">
+                {negNit && <div>NIT/C.C.: {negNit}</div>}
+                {negDir && <div>{negDir}</div>}
+                {negTel && <div>Tel: {negTel}</div>}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="font-display text-lg font-bold text-slate-800">Factura N° {venta.id}</div>
@@ -42,8 +56,16 @@ export default async function FacturaPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="mt-5 text-sm">
-          <span className="text-slate-500">Cliente: </span>
-          <span className="font-medium text-slate-800">{venta.cliente?.nombre ?? "Consumidor final"}</span>
+          <div>
+            <span className="text-slate-500">Cliente: </span>
+            <span className="font-medium text-slate-800">{cli?.nombre ?? "Consumidor final"}</span>
+          </div>
+          {(cli?.cedula || cli?.telefono) && (
+            <div className="mt-0.5 flex flex-wrap gap-x-4 text-xs text-slate-500">
+              {cli?.cedula && <span>C.C./NIT: {cli.cedula}</span>}
+              {cli?.telefono && <span>Tel: {cli.telefono}</span>}
+            </div>
+          )}
         </div>
 
         <table className="mt-4 w-full text-sm">

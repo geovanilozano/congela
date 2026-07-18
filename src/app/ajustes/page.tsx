@@ -4,7 +4,7 @@ import { BotonGuardar } from "@/components/BotonGuardar";
 import { SubirRespaldo } from "@/components/SubirRespaldo";
 import { ROLES } from "@/lib/auth/permisos";
 import { getAjuste } from "@/lib/ajustes";
-import { borrarDatosDemo, crearUsuario, eliminarUsuario, guardarClaveOcr, restaurarRespaldoAccion } from "./actions";
+import { borrarDatosDemo, crearUsuario, eliminarUsuario, guardarClaveOcr, guardarDatosNegocio, restaurarRespaldoAccion } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +22,49 @@ export default async function AjustesPage({
   searchParams: Promise<{ error?: string; restaurado?: string }>;
 }) {
   const sp = await searchParams;
-  const usuarios = await db.usuario.findMany({ orderBy: { id: "asc" } });
-  const claveOcr = await getAjuste("anthropicApiKey");
+  const [usuarios, claveOcr, negocioNombre, negocioNit, negocioDireccion, negocioTelefono] = await Promise.all([
+    db.usuario.findMany({ orderBy: { id: "asc" } }),
+    getAjuste("anthropicApiKey"),
+    getAjuste("negocioNombre"),
+    getAjuste("negocioNit"),
+    getAjuste("negocioDireccion"),
+    getAjuste("negocioTelefono"),
+  ]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">⚙️ Ajustes</h1>
-        <p className="mt-1 text-sm text-slate-500">Usuarios, copia de seguridad y limpieza de datos.</p>
+        <p className="mt-1 text-sm text-slate-500">Datos del negocio, usuarios, copia de seguridad y limpieza de datos.</p>
+      </div>
+
+      {/* Datos del negocio (para la factura) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold text-slate-700">🧾 Datos del negocio (para la factura)</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Aparecen en el encabezado de las facturas. Todos son opcionales.
+        </p>
+        <form action={guardarDatosNegocio} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="text-slate-500">Nombre del negocio</span>
+            <input name="negocioNombre" defaultValue={negocioNombre ?? ""} placeholder="Congela" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-500">NIT o cédula</span>
+            <input name="negocioNit" defaultValue={negocioNit ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-500">Dirección</span>
+            <input name="negocioDireccion" defaultValue={negocioDireccion ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-500">Teléfono</span>
+            <input name="negocioTelefono" defaultValue={negocioTelefono ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          </label>
+          <BotonGuardar className="w-fit rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2">
+            Guardar datos del negocio
+          </BotonGuardar>
+        </form>
       </div>
 
       {/* Usuarios */}
