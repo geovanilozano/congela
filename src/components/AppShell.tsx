@@ -38,6 +38,7 @@ const grupos: Grupo[] = [
     items: [
       { href: "/", label: "Tablero", icon: "📊" },
       { href: "/reportes", label: "Reportes", icon: "📈" },
+      { href: "/asistente", label: "Asistente", icon: "🤖" },
     ],
   },
   {
