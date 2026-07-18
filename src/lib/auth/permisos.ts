@@ -10,7 +10,7 @@ export const ROLES: { valor: Rol; etiqueta: string }[] = [
 
 // Rutas de apoyo que necesita cualquiera que haya iniciado sesión:
 // ver la foto de un comprobante y leer una factura por foto desde su propia pantalla.
-const COMUNES = ["/api/archivo", "/api/ocr"];
+const COMUNES = ["/api/archivo", "/api/ocr", "/api/ocr-gasto"];
 
 const PERMISOS: Record<string, string[] | "*"> = {
   dueno: "*",

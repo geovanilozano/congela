@@ -8,6 +8,7 @@ import { Paginacion } from "@/components/Paginacion";
 import { rangoFechas, fechaParaInput } from "@/lib/fechas";
 import { paginar } from "@/lib/paginacion";
 import { InputDinero } from "@/components/InputDinero";
+import { LectorFotoGasto } from "@/components/LectorFotoGasto";
 
 export const dynamic = "force-dynamic";
 
@@ -111,16 +112,15 @@ export default async function ComprasPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor ($)</span>
-          <InputDinero name="valorPesos" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero id="gastoValor" name="valorPesos" required defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha</span>
           <input name="fecha" type="date" defaultValue={enEdicion ? fmtFechaInput(enEdicion.fecha) : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <label className="text-sm lg:col-span-2">
-          <span className="text-slate-500">Foto del comprobante</span>
-          <input name="foto" type="file" accept="image/*" capture="environment" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs" />
-        </label>
+        <div className="text-sm lg:col-span-2">
+          <LectorFotoGasto />
+        </div>
         <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
           {enEdicion ? "Guardar cambios" : "Registrar gasto"}
         </BotonGuardar>
