@@ -136,6 +136,12 @@ export default async function ClientesPage({
                       {formatMoney(c.porCobrarCents)}
                     </div>
                   </div>
+                  <Link
+                    href={`/clientes/${c.id}/cuenta`}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Ver cuenta
+                  </Link>
                   {waLink && (
                     <a
                       href={waLink}

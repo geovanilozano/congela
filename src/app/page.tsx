@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes] = await Promise.all([
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -26,6 +26,7 @@ export default async function Home() {
     db.insumoInventario.findMany(),
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
+    db.venta.findMany({ where: { formaPago: "credito", pagada: false }, select: { clienteId: true, totalCents: true } }),
   ]);
 
   const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
@@ -91,6 +92,10 @@ export default async function Home() {
   // Ventas del día sin cerrar: recordar cerrar la caja (es el paso que reparte el dinero).
   const pendientesCents = ventasPendientes.reduce((a, v) => a + v.totalCents, 0);
 
+  // Fiado por cobrar: cuánto te deben y cuántos clientes.
+  const totalFiadoCents = fiadoPorCobrar.reduce((a, v) => a + v.totalCents, 0);
+  const clientesQueDeben = new Set(fiadoPorCobrar.filter((v) => v.clienteId != null).map((v) => v.clienteId)).size;
+
   const alertas: { nivel: "alta" | "media"; texto: string; href: string }[] = [];
   if (cuotasVencidas.length > 0)
     alertas.push({
@@ -101,6 +106,7 @@ export default async function Home() {
   if (cuotasProximas.length > 0) alertas.push({ nivel: "media", texto: `${cuotasProximas.length} cuota(s) del crédito por vencer`, href: "/credito" });
   if (mantVencidos > 0) alertas.push({ nivel: "alta", texto: `${mantVencidos} mantenimiento(s) vencido(s)`, href: "/mantenimiento" });
   if (pendientesCents > 0) alertas.push({ nivel: "media", texto: `Tienes ${formatMoney(pendientesCents)} en ventas sin cerrar — recuerda cerrar la caja`, href: "/caja" });
+  if (totalFiadoCents > 0) alertas.push({ nivel: "media", texto: `Te deben ${formatMoney(totalFiadoCents)} en fiado${clientesQueDeben > 0 ? ` (${clientesQueDeben} cliente(s))` : ""} — recuérdales por WhatsApp`, href: "/clientes" });
   if (insumosBajos.length > 0) alertas.push({ nivel: "media", texto: `${insumosBajos.length} insumo(s) con bajo stock: ${insumosBajos.map((i) => i.nombre).join(", ")}`, href: "/inventario" });
   if (mantProximos > 0) alertas.push({ nivel: "media", texto: `${mantProximos} mantenimiento(s) próximo(s)`, href: "/mantenimiento" });
 
