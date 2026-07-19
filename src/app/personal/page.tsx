@@ -13,20 +13,45 @@ const estadoColor: Record<string, string> = {
   ausente: "text-red-600",
 };
 
-export default async function PersonalPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
+export default async function PersonalPage({ searchParams }: { searchParams: Promise<{ editar?: string; buscar?: string }> }) {
   const sp = await searchParams;
-  const empleados = await db.empleado.findMany({
-    include: {
-      asistencias: { orderBy: { fecha: "desc" }, take: 5 },
-      pagos: true,
-      producciones: true,
-    },
-    orderBy: { nombre: "asc" },
-  });
+  const q = (sp.buscar ?? "").trim();
 
-  const enEdicion = sp.editar ? await db.empleado.findUnique({ where: { id: Number(sp.editar) } }) : null;
+  // Filtro de búsqueda por nombre o cargo (no afecta el resumen del negocio).
+  const filtro = q
+    ? {
+        OR: [
+          { nombre: { contains: q, mode: "insensitive" as const } },
+          { cargo: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
 
-  const totalNomina = empleados.reduce((a, e) => a + e.pagos.reduce((s, p) => s + p.valorCents, 0), 0);
+  // "Este mes" en hora local (nunca toISOString).
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  const inicioMesSiguiente = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1);
+
+  const [empleados, enEdicion, empleadosActivos, nominaMesAgg] = await Promise.all([
+    db.empleado.findMany({
+      where: filtro,
+      include: {
+        asistencias: { orderBy: { fecha: "desc" }, take: 5 },
+        pagos: true,
+        producciones: true,
+      },
+      orderBy: { nombre: "asc" },
+    }),
+    sp.editar ? db.empleado.findUnique({ where: { id: Number(sp.editar) } }) : Promise.resolve(null),
+    // Resumen del negocio completo (no depende del filtro de búsqueda).
+    db.empleado.count({ where: { activo: true } }),
+    db.pagoNomina.aggregate({
+      _sum: { valorCents: true },
+      where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente } },
+    }),
+  ]);
+
+  const nominaMes = nominaMesAgg._sum.valorCents ?? 0;
 
   return (
     <div className="space-y-6">
@@ -39,12 +64,12 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
 
       <div className="grid grid-cols-2 gap-3 sm:max-w-md">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-500">Empleados</div>
-          <div className="mt-0.5 text-xl font-bold text-slate-800">{empleados.length}</div>
+          <div className="text-xs text-slate-500">Empleados activos</div>
+          <div className="mt-0.5 text-xl font-bold text-slate-800">{empleadosActivos}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-500">Total pagado (nómina)</div>
-          <div className="mt-0.5 text-xl font-bold text-sky-700">{formatMoney(totalNomina)}</div>
+          <div className="text-xs text-slate-500">Nómina pagada este mes</div>
+          <div className="mt-0.5 text-xl font-bold text-sky-700">{formatMoney(nominaMes)}</div>
         </div>
       </div>
 
@@ -98,9 +123,29 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
         </div>
       </form>
 
+      {/* Búsqueda de empleados */}
+      <form className="flex flex-wrap gap-2">
+        <input
+          name="buscar"
+          defaultValue={q}
+          placeholder="Buscar por nombre o cargo…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Buscar</button>
+        {q && (
+          <a href="/personal" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
       {/* Tarjetas de empleados */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {empleados.length === 0 && <p className="text-sm text-slate-400">Sin empleados aún.</p>}
+        {empleados.length === 0 && (
+          <p className="text-sm text-slate-400">
+            {q ? "No se encontraron empleados con esa búsqueda." : "Sin empleados aún."}
+          </p>
+        )}
         {empleados.map((e) => {
           const totalPagado = e.pagos.reduce((s, p) => s + p.valorCents, 0);
           const bolsas = e.producciones.reduce((s, p) => s + p.bolsas, 0);
