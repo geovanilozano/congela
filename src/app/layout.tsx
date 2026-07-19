@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Onest } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
@@ -18,6 +18,12 @@ const body = Onest({
 export const metadata: Metadata = {
   title: "Congela — Control de negocio de hielo",
   description: "Inversión, crédito, fondos, ventas y finanzas del negocio de hielo.",
+  // Hace que en iOS (Añadir a inicio) la app se vea a pantalla completa con su nombre.
+  appleWebApp: { capable: true, title: "Congela", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0ea5e9",
 };
 
 export default async function RootLayout({
