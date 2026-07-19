@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
-import { formatMoney, fromCents } from "@/lib/finance/money";
+import { formatMoney, fromCents, round2 } from "@/lib/finance/money";
 import { balanceEnergia } from "@/lib/finance/energia";
+import { fechaParaInput } from "@/lib/fechas";
 import { getAjusteNumero, getAjuste } from "@/lib/ajustes";
+import { EnergiaChart, type PuntoEnergia } from "@/components/EnergiaChart";
 import {
   guardarPrecioKwh,
   registrarGeneracion,
@@ -30,6 +32,38 @@ export default async function EnergiaPage() {
   const totalCons = consumos.reduce((a, c) => a + c.kwh, 0);
   const bal = balanceEnergia({ generacionKwh: totalGen, consumoKwh: totalCons, precioKwhCents });
 
+  // --- Ahorro solar del MES en curso ---
+  const ahora = new Date();
+  const mismoMes = (d: Date) =>
+    d.getFullYear() === ahora.getFullYear() && d.getMonth() === ahora.getMonth();
+  const genMes = generaciones.filter((g) => mismoMes(g.fecha)).reduce((a, g) => a + g.kwh, 0);
+  const consMes = consumos.filter((c) => mismoMes(c.fecha)).reduce((a, c) => a + c.kwh, 0);
+  const balMes = balanceEnergia({ generacionKwh: genMes, consumoKwh: consMes, precioKwhCents });
+  const nombreMes = ahora.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+
+  // --- Serie diaria para la gráfica: generación vs consumo ---
+  const porDia = new Map<string, { gen: number; cons: number; fecha: Date }>();
+  for (const g of generaciones) {
+    const key = fechaParaInput(g.fecha);
+    const prev = porDia.get(key) ?? { gen: 0, cons: 0, fecha: g.fecha };
+    prev.gen += g.kwh;
+    porDia.set(key, prev);
+  }
+  for (const c of consumos) {
+    const key = fechaParaInput(c.fecha);
+    const prev = porDia.get(key) ?? { gen: 0, cons: 0, fecha: c.fecha };
+    prev.cons += c.kwh;
+    porDia.set(key, prev);
+  }
+  const chartData: PuntoEnergia[] = [...porDia.entries()]
+    .sort(([a], [b]) => a.localeCompare(b)) // ascendente por fecha (clave AAAA-MM-DD)
+    .slice(-14) // últimos 14 días con registro
+    .map(([, v]) => ({
+      label: v.fecha.toLocaleDateString("es-CO", { month: "short", day: "numeric" }),
+      generacion: round2(v.gen),
+      consumo: round2(v.cons),
+    }));
+
   return (
     <div className="space-y-6">
       <div>
@@ -47,6 +81,40 @@ export default async function EnergiaPage() {
         <Kpi label="Consumido" valor={`${totalCons.toFixed(1)} kWh`} color="text-slate-800" />
         <Kpi label="Ahorro solar" valor={formatMoney(bal.ahorroCents)} color="text-emerald-600" extra={`${bal.porcentajeSolar}% del consumo`} />
         <Kpi label="A pagar a la red" valor={formatMoney(bal.costoRedCents)} color="text-sky-700" extra={`${bal.redKwh.toFixed(1)} kWh de red`} />
+      </div>
+
+      {/* Ahorro solar del mes + gráfica generación vs consumo */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="flex flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+          <div className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+            Ahorro solar del mes
+          </div>
+          <div className="mt-1 text-3xl font-bold text-emerald-600">
+            {formatMoney(balMes.ahorroCents)}
+          </div>
+          <div className="mt-1 text-sm capitalize text-slate-500">{nombreMes}</div>
+          <div className="mt-3 space-y-1 text-sm text-slate-600">
+            <p>
+              <span className="font-semibold text-amber-600">{balMes.porcentajeSolar}%</span> del
+              consumo cubierto con paneles.
+            </p>
+            <p className="text-xs text-slate-500">
+              Generado {genMes.toFixed(1)} kWh · Consumido {consMes.toFixed(1)} kWh
+            </p>
+          </div>
+          {precioKwhCents === 0 && (
+            <p className="mt-2 text-xs text-amber-600">
+              Define el precio del kWh abajo para ver el ahorro en pesos.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+          <h2 className="mb-2 text-sm font-semibold text-slate-600">
+            Generación solar vs consumo (por día)
+          </h2>
+          <EnergiaChart data={chartData} />
+        </div>
       </div>
 
       {/* Precio del kWh */}
