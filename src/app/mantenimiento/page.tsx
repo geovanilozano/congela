@@ -27,12 +27,24 @@ function fmtFechaInput(d: Date | null) {
 export default async function MantenimientoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
+  searchParams: Promise<{ editar?: string; desde?: string; hasta?: string; buscar?: string }>;
 }) {
   const sp = await searchParams;
+  const q = (sp.buscar ?? "").trim();
+
+  // Búsqueda por descripción o por el nombre del equipo (activo).
+  const filtroBusqueda = q
+    ? {
+        OR: [
+          { descripcion: { contains: q, mode: "insensitive" as const } },
+          { activo: { is: { nombre: { contains: q, mode: "insensitive" as const } } } },
+        ],
+      }
+    : {};
+
   const [mantenimientos, activos, enEdicion] = await Promise.all([
     db.mantenimiento.findMany({
-      where: { fechaProgramada: rangoFechas(sp) },
+      where: { fechaProgramada: rangoFechas(sp), ...filtroBusqueda },
       include: { activo: true },
       orderBy: { fechaProgramada: "asc" },
     }),
@@ -106,7 +118,12 @@ export default async function MantenimientoPage({
         </div>
       </form>
 
-      <FiltroFecha desde={sp.desde} hasta={sp.hasta} />
+      <FiltroFecha
+        desde={sp.desde}
+        hasta={sp.hasta}
+        buscar={q}
+        placeholderBuscar="Descripción o equipo…"
+      />
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[720px] text-sm">
@@ -122,16 +139,32 @@ export default async function MantenimientoPage({
             </tr>
           </thead>
           <tbody>
-            {conEstado.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin mantenimientos aún.</td></tr>}
-            {conEstado.map((m) => (
-              <tr key={m.id} className="border-t border-slate-100">
+            {conEstado.length === 0 && (
+              <tr>
+                <td colSpan={7} className="p-4 text-center text-slate-400">
+                  {q ? "No se encontraron mantenimientos con esa búsqueda." : "Sin mantenimientos aún."}
+                </td>
+              </tr>
+            )}
+            {conEstado.map((m) => {
+              // Resaltado de filas según su estado respecto a hoy.
+              const filaCls =
+                m.est === "vencido"
+                  ? "border-l-4 border-l-red-500 bg-red-50"
+                  : m.est === "proximo"
+                  ? "border-l-4 border-l-amber-400 bg-amber-50"
+                  : "";
+              return (
+              <tr key={m.id} className={`border-t border-slate-100 ${filaCls}`}>
                 <td className="p-3 font-medium text-slate-700">{m.descripcion}</td>
                 <td className="text-slate-500">{m.activo?.nombre || "—"}</td>
                 <td className="text-slate-600">{m.tipo}</td>
                 <td className="text-slate-500">{fmtFecha(m.fechaProgramada)}</td>
                 <td className="text-right">{formatMoney(m.costoCents)}</td>
                 <td>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge[m.est].cls}`}>{badge[m.est].label}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge[m.est].cls}`}>
+                    {m.est === "vencido" ? "⚠ " : ""}{badge[m.est].label}
+                  </span>
                 </td>
                 <td className="pr-3 text-right">
                   {m.estado !== "realizado" && (
@@ -148,7 +181,8 @@ export default async function MantenimientoPage({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
