@@ -16,13 +16,25 @@ function fmtFecha(d: Date) {
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string; ok?: string; error?: string }>;
+  searchParams: Promise<{ editar?: string; ok?: string; error?: string; buscar?: string }>;
 }) {
   const sp = await searchParams;
   const editarId = sp.editar ? Number(sp.editar) : null;
+  const q = (sp.buscar ?? "").trim();
+
+  // Filtro de búsqueda por nombre, cédula o teléfono.
+  const filtro = q
+    ? {
+        OR: [
+          { nombre: { contains: q, mode: "insensitive" as const } },
+          { cedula: { contains: q, mode: "insensitive" as const } },
+          { telefono: { contains: q } },
+        ],
+      }
+    : undefined;
 
   const [clientes, ventas, enEdicion] = await Promise.all([
-    db.cliente.findMany({ orderBy: { nombre: "asc" } }),
+    db.cliente.findMany({ where: filtro, orderBy: { nombre: "asc" } }),
     db.venta.findMany({
       select: { id: true, clienteId: true, totalCents: true, formaPago: true, pagada: true, fecha: true },
       orderBy: { fecha: "desc" },
@@ -31,7 +43,10 @@ export default async function ClientesPage({
   ]);
 
   const resumen = resumenClientes(clientes, ventas);
-  const totalPorCobrar = resumen.reduce((a, c) => a + c.porCobrarCents, 0);
+  // Total por cobrar de TODO el negocio (no depende del filtro de búsqueda).
+  const totalPorCobrar = ventas
+    .filter((v) => v.formaPago === "credito" && !v.pagada)
+    .reduce((a, v) => a + v.totalCents, 0);
 
   // Ventas a crédito no pagadas de cada cliente, para listarlas y poder marcarlas.
   const pendientesDe = (clienteId: number) =>
@@ -100,7 +115,27 @@ export default async function ClientesPage({
         <span className="text-lg font-bold">{formatMoney(totalPorCobrar)}</span>
       </div>
 
-      {clientes.length === 0 && <p className="text-sm text-slate-400">Aún no hay clientes registrados.</p>}
+      {/* Búsqueda de clientes */}
+      <form className="flex flex-wrap gap-2">
+        <input
+          name="buscar"
+          defaultValue={q}
+          placeholder="Buscar por nombre, cédula o teléfono…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Buscar</button>
+        {q && (
+          <a href="/clientes" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      {clientes.length === 0 && (
+        <p className="text-sm text-slate-400">
+          {q ? "No se encontraron clientes con esa búsqueda." : "Aún no hay clientes registrados."}
+        </p>
+      )}
 
       <div className="space-y-3">
         {resumen.map((c) => {
