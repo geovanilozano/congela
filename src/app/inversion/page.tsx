@@ -12,12 +12,36 @@ function fmtFecha(d: Date) {
   return new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default async function InversionPage({ searchParams }: { searchParams: Promise<{ editar?: string }> }) {
+export default async function InversionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ editar?: string; buscar?: string }>;
+}) {
   const sp = await searchParams;
-  const enEdicion = sp.editar ? await db.inversion.findUnique({ where: { id: Number(sp.editar) } }) : null;
-  const items = await db.inversion.findMany({ orderBy: { fecha: "desc" } });
-  const total = items.reduce((a, i) => a + i.valorCents, 0);
-  const totalCredito = items.filter((i) => i.formaPago === "credito").reduce((a, i) => a + i.valorCents, 0);
+  const q = (sp.buscar ?? "").trim();
+
+  // Filtro de búsqueda por descripción o proveedor.
+  const filtro = q
+    ? {
+        OR: [
+          { descripcion: { contains: q, mode: "insensitive" as const } },
+          { proveedor: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  // Los resúmenes son de TODO el negocio (no dependen del filtro de búsqueda).
+  const [enEdicion, items, aggTotal, aggContado, aggCredito] = await Promise.all([
+    sp.editar ? db.inversion.findUnique({ where: { id: Number(sp.editar) } }) : Promise.resolve(null),
+    db.inversion.findMany({ where: filtro, orderBy: { fecha: "desc" } }),
+    db.inversion.aggregate({ _sum: { valorCents: true } }),
+    db.inversion.aggregate({ where: { formaPago: "contado" }, _sum: { valorCents: true } }),
+    db.inversion.aggregate({ where: { formaPago: "credito" }, _sum: { valorCents: true } }),
+  ]);
+
+  const total = aggTotal._sum.valorCents ?? 0;
+  const totalContado = aggContado._sum.valorCents ?? 0;
+  const totalCredito = aggCredito._sum.valorCents ?? 0;
 
   return (
     <div className="space-y-6">
@@ -29,10 +53,14 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:max-w-2xl">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs text-slate-500">Total invertido</div>
           <div className="mt-0.5 text-xl font-bold text-slate-800">{formatMoney(total)}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-500">Pagado de contado</div>
+          <div className="mt-0.5 text-xl font-bold text-emerald-600">{formatMoney(totalContado)}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs text-slate-500">Comprado a crédito</div>
@@ -83,6 +111,22 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
         )}
       </form>
 
+      {/* Búsqueda por descripción o proveedor */}
+      <form className="flex flex-wrap gap-2">
+        <input
+          name="buscar"
+          defaultValue={q}
+          placeholder="Buscar por descripción o proveedor…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Buscar</button>
+        {q && (
+          <a href="/inversion" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
@@ -97,7 +141,7 @@ export default async function InversionPage({ searchParams }: { searchParams: Pr
           </thead>
           <tbody>
             {items.length === 0 && (
-              <tr><td colSpan={6} className="p-4 text-center text-slate-400">Sin registros aún.</td></tr>
+              <tr><td colSpan={6} className="p-4 text-center text-slate-400">{q ? "No se encontraron inversiones con esa búsqueda." : "Sin registros aún."}</td></tr>
             )}
             {items.map((i) => (
               <tr key={i.id} className="border-t border-slate-100">
