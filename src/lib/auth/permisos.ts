@@ -16,7 +16,7 @@ const PERMISOS: Record<string, string[] | "*"> = {
   dueno: "*",
   // El cajero exporta ventas y gastos desde Reportes (el respaldo completo es solo del dueño:
   // eso lo comprueba la propia ruta /api/export).
-  cajero: ["/", "/reportes", "/ventas", "/caja", "/compras", "/clientes", "/api/export", ...COMUNES],
+  cajero: ["/", "/reportes", "/ventas", "/caja", "/compras", "/clientes", "/api/export", "/api/export-clientes", ...COMUNES],
   operario: ["/", "/produccion", "/inventario", "/mantenimiento", ...COMUNES],
 };
 
