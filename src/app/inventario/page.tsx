@@ -11,11 +11,18 @@ const UNIDADES = ["unidad", "bolsa", "kg", "litro", "paquete"];
 export default async function InventarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string; error?: string; insumo?: string; hay?: string }>;
+  searchParams: Promise<{ editar?: string; error?: string; insumo?: string; hay?: string; buscar?: string }>;
 }) {
   const sp = await searchParams;
-  const insumos = await db.insumoInventario.findMany({ orderBy: { nombre: "asc" } });
-  const alertas = bajoStock(insumos);
+  const q = (sp.buscar ?? "").trim();
+
+  // Filtro de búsqueda por nombre del insumo.
+  const filtro = q ? { nombre: { contains: q, mode: "insensitive" as const } } : undefined;
+
+  const insumos = await db.insumoInventario.findMany({ where: filtro, orderBy: { nombre: "asc" } });
+  // El aviso global de reposición no depende del filtro de búsqueda: siempre mira todo el inventario.
+  const todos = q ? await db.insumoInventario.findMany({ orderBy: { nombre: "asc" } }) : insumos;
+  const alertas = bajoStock(todos);
   const enEdicion = sp.editar ? await db.insumoInventario.findUnique({ where: { id: Number(sp.editar) } }) : null;
 
   // Aviso cuando se intentó sacar más de lo que hay.
@@ -101,18 +108,45 @@ export default async function InventarioPage({
         </BotonGuardar>
       </form>
 
+      {/* Búsqueda de insumos por nombre */}
+      <form className="flex flex-wrap gap-2">
+        <input
+          name="buscar"
+          defaultValue={q}
+          placeholder="Buscar insumo por nombre…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Buscar</button>
+        {q && (
+          <a href="/inventario" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
       <div className="space-y-3">
-        {insumos.length === 0 && <p className="text-sm text-slate-400">Sin insumos aún.</p>}
+        {insumos.length === 0 && (
+          <p className="text-sm text-slate-400">
+            {q ? "No se encontraron insumos." : "Sin insumos aún."}
+          </p>
+        )}
         {insumos.map((i) => {
           const alerta = necesitaReposicion(i);
           return (
-            <div key={i.id} className={`rounded-xl border p-4 shadow-sm ${alerta ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"}`}>
+            <div key={i.id} className={`rounded-xl border p-4 shadow-sm ${alerta ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="font-semibold text-slate-800">{i.nombre}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-slate-800">{i.nombre}</span>
+                    {alerta && (
+                      <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">
+                        ⚠ Stock bajo
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-slate-500">Mínimo: {i.stockMinimo} {i.unidad}</div>
                 </div>
-                <div className={`text-2xl font-bold ${alerta ? "text-red-600" : "text-slate-800"}`}>
+                <div className={`text-2xl font-bold ${alerta ? "text-amber-600" : "text-slate-800"}`}>
                   {i.stock} <span className="text-sm font-normal text-slate-500">{i.unidad}</span>
                 </div>
                 <form action={moverInventario} className="flex items-end gap-2">
