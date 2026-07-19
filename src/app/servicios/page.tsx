@@ -34,10 +34,36 @@ export default async function ServiciosPage({
     ? await db.reciboServicio.findUnique({ where: { id: Number(sp.editar) } })
     : null;
 
-  const recibos = await db.reciboServicio.findMany({
-    where: { fecha: rangoFechas(sp) },
-    orderBy: { fecha: "desc" },
-  });
+  // Rango del MES ACTUAL en hora local (nunca toISOString): del día 1 al último día.
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0, 0);
+  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+  const rangoMes = { gte: inicioMes, lte: finMes };
+  const nombreMes = ahora.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+
+  const [recibos, resumenMes, porTipoMes] = await Promise.all([
+    db.reciboServicio.findMany({
+      where: { fecha: rangoFechas(sp) },
+      orderBy: { fecha: "desc" },
+    }),
+    db.reciboServicio.aggregate({
+      where: { fecha: rangoMes },
+      _sum: { valorCents: true },
+    }),
+    db.reciboServicio.groupBy({
+      by: ["tipo"],
+      where: { fecha: rangoMes },
+      _sum: { valorCents: true },
+    }),
+  ]);
+
+  // Resumen del mes actual: total pagado y desglose por tipo de servicio.
+  const totalMes = resumenMes._sum.valorCents ?? 0;
+  const sumaPorTipoMes = new Map(porTipoMes.map((g) => [g.tipo, g._sum.valorCents ?? 0]));
+  const desgloseMes = Object.keys(TIPOS).map((t) => ({
+    tipo: t,
+    total: sumaPorTipoMes.get(t) ?? 0,
+  }));
 
   const totalPorTipo = Object.keys(TIPOS).map((t) => ({
     tipo: t,
@@ -55,7 +81,24 @@ export default async function ServiciosPage({
         </p>
       </div>
 
-      {/* Totales por servicio */}
+      {/* Resumen del mes actual */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold capitalize text-slate-700">Resumen de {nombreMes}</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {desgloseMes.map((t) => (
+            <div key={t.tipo} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="text-xs text-slate-500">{TIPOS[t.tipo].icon} {TIPOS[t.tipo].label}</div>
+              <div className="mt-1 text-lg font-bold text-slate-800">{formatMoney(t.total)}</div>
+            </div>
+          ))}
+          <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
+            <div className="text-xs text-sky-600">Total pagado este mes</div>
+            <div className="mt-1 text-lg font-bold text-sky-700">{formatMoney(totalMes)}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Totales por servicio (según el filtro de fechas) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {totalPorTipo.map((t) => (
           <div key={t.tipo} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
