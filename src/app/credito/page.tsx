@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
+import { estadoCuota } from "@/lib/finance/cuotas";
 import { crearCredito, registrarPago } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { InputDinero } from "@/components/InputDinero";
@@ -21,6 +22,25 @@ export default async function CreditoPage({
     orderBy: { id: "desc" },
   });
 
+  // ---- Resumen global del crédito ----
+  // Se agregan todas las cuotas de todos los créditos registrados para dar una
+  // foto única del endeudamiento (total, abonado, saldo y % pagado).
+  const hoy = new Date();
+  const todasCuotas = creditos.flatMap((c) => c.cuotas);
+  const totalCreditoGlobal = todasCuotas.reduce((a, q) => a + q.cuotaCents, 0);
+  const totalAbonadoGlobal = todasCuotas.reduce((a, q) => a + q.abonadoCents, 0);
+  const saldoPendienteGlobal = totalCreditoGlobal - totalAbonadoGlobal;
+  const pctPagado =
+    totalCreditoGlobal > 0 ? Math.round((totalAbonadoGlobal / totalCreditoGlobal) * 100) : 0;
+
+  // Próxima cuota a pagar: la cuota NO saldada más próxima por fecha de vencimiento.
+  const proximaCuota =
+    todasCuotas
+      .filter((q) => q.estado !== "pagada")
+      .sort((a, b) => a.fechaVencimiento.getTime() - b.fechaVencimiento.getTime())[0] ?? null;
+  const estadoProxima = proximaCuota ? estadoCuota(proximaCuota, hoy) : null;
+  const faltaProxima = proximaCuota ? proximaCuota.cuotaCents - proximaCuota.abonadoCents : 0;
+
   return (
     <div className="space-y-8">
       <div>
@@ -39,6 +59,120 @@ export default async function CreditoPage({
       {error === "abono" && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <strong>No se registró el abono.</strong> Escribe un monto mayor que $0.
+        </div>
+      )}
+
+      {/* Resumen del crédito: KPIs, barra de progreso y próxima cuota a pagar */}
+      {creditos.length > 0 && (
+        <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Resumen del crédito
+            </h2>
+            <span className="text-xs text-slate-400">
+              {creditos.length === 1 ? "1 crédito registrado" : `${creditos.length} créditos registrados`}
+            </span>
+          </div>
+
+          {/* KPIs principales */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-sm">
+              <div className="text-xs text-slate-500">Total del crédito</div>
+              <div className="mt-0.5 text-lg font-semibold text-slate-800">
+                {formatMoney(totalCreditoGlobal)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
+              <div className="text-xs text-emerald-700">Total abonado</div>
+              <div className="mt-0.5 text-lg font-semibold text-emerald-800">
+                {formatMoney(totalAbonadoGlobal)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-sm">
+              <div className="text-xs text-amber-700">Saldo pendiente</div>
+              <div className="mt-0.5 text-lg font-semibold text-amber-800">
+                {formatMoney(saldoPendienteGlobal)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 shadow-sm">
+              <div className="text-xs text-sky-700">% pagado</div>
+              <div className="mt-0.5 text-lg font-semibold text-sky-800">{pctPagado}%</div>
+            </div>
+          </div>
+
+          {/* Barra de progreso del pago */}
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs">
+              <span className="text-slate-500">Avance del pago</span>
+              <span className="font-semibold text-emerald-700">{pctPagado}%</span>
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${pctPagado}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Próxima cuota a pagar */}
+          {proximaCuota ? (
+            <div
+              className={`rounded-lg border p-4 ${
+                estadoProxima === "vencida"
+                  ? "border-red-300 bg-red-50"
+                  : estadoProxima === "proxima"
+                    ? "border-amber-300 bg-amber-50"
+                    : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div
+                    className={`text-xs font-semibold uppercase tracking-wide ${
+                      estadoProxima === "vencida"
+                        ? "text-red-700"
+                        : estadoProxima === "proxima"
+                          ? "text-amber-700"
+                          : "text-slate-500"
+                    }`}
+                  >
+                    {estadoProxima === "vencida"
+                      ? "⚠️ Próxima cuota · VENCIDA"
+                      : estadoProxima === "proxima"
+                        ? "⏳ Próxima cuota · por vencer"
+                        : "Próxima cuota a pagar"}
+                  </div>
+                  <div className="mt-0.5 text-sm text-slate-600">
+                    Cuota {proximaCuota.numero} · vence {fmtFecha(proximaCuota.fechaVencimiento)}
+                  </div>
+                  {proximaCuota.abonadoCents > 0 && (
+                    <div className="mt-0.5 text-xs text-slate-400">
+                      Ya abonaste {formatMoney(proximaCuota.abonadoCents)} de{" "}
+                      {formatMoney(proximaCuota.cuotaCents)}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-slate-500">Falta por pagar</div>
+                  <div
+                    className={`text-xl font-bold ${
+                      estadoProxima === "vencida"
+                        ? "text-red-700"
+                        : estadoProxima === "proxima"
+                          ? "text-amber-700"
+                          : "text-slate-800"
+                    }`}
+                  >
+                    {formatMoney(faltaProxima)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+              🎉 ¡No hay cuotas pendientes! El crédito está al día.
+            </div>
+          )}
         </div>
       )}
 
