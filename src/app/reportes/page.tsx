@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { costoPorBolsa, margenPorBolsa, puntoEquilibrio, recuperacionInversion, resumenPorMes } from "@/lib/finance/reportes";
 import { FondosChart, IngresosChart, TendenciaChart } from "@/components/DashboardCharts";
+import { ComparativoChart } from "@/components/ComparativoChart";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
 import { BotonImprimir } from "@/components/BotonImprimir";
@@ -52,9 +53,21 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     .filter((c) => c.saldo > 0);
   const ingresosData = cierres.map((c) => ({ label: `#${c.id}`, total: c.totalCents }));
 
-  // Tendencia mes a mes (últimos 6 meses) para ver si el negocio va mejor o peor.
-  const meses = resumenPorMes(ventasTodas, gastosTodos).slice(-6);
+  // Tendencia mes a mes para ver si el negocio va mejor o peor.
+  const mesesTodos = resumenPorMes(ventasTodas, gastosTodos);
+  const meses = mesesTodos.slice(-6); // últimos 6 meses para la tendencia y la tabla
   const tendenciaData = meses.map((m) => ({ mes: etiquetaMes(m.mes), ingresos: m.ingresosCents, gastos: m.gastosCents }));
+  // Comparativo ingresos vs gastos (últimos 12 meses), dos barras por mes.
+  const comparativoData = mesesTodos.slice(-12).map((m) => ({ mes: etiquetaMes(m.mes), ingresos: m.ingresosCents, gastos: m.gastosCents }));
+
+  // Utilidad neta del MES ACTUAL (ingresos del mes − gastos del mes), en hora local.
+  const hoy = new Date();
+  const claveMesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+  const mesActual = mesesTodos.find((m) => m.mes === claveMesActual);
+  const ingresosMesCents = mesActual?.ingresosCents ?? 0;
+  const gastosMesCents = mesActual?.gastosCents ?? 0;
+  const utilidadMesCents = ingresosMesCents - gastosMesCents;
+  const etiquetaMesActual = etiquetaMes(claveMesActual);
   // Comparación del último mes con el anterior.
   const ultimo = meses[meses.length - 1];
   const previo = meses[meses.length - 2];
@@ -96,6 +109,30 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </div>
         <div className="mt-2 text-sm text-slate-500">
           {roi.porcentaje}% recuperado · Invertido {formatMoney(invertidoCents)} · Utilidad acumulada {formatMoney(utilidadCents)}
+        </div>
+      </div>
+
+      {/* Utilidad neta del mes actual */}
+      <div className={`rounded-xl border p-5 shadow-sm ${utilidadMesCents >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Utilidad neta del mes</div>
+            <div className="mt-1 text-sm capitalize text-slate-500">{etiquetaMesActual}</div>
+            <div className={`mt-1 text-3xl font-bold ${utilidadMesCents >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+              {formatMoney(utilidadMesCents)}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Ingresos del mes − gastos del mes</div>
+          </div>
+          <div className="flex gap-6 text-right">
+            <div>
+              <div className="text-xs text-slate-500">Ingresos</div>
+              <div className="mt-1 text-lg font-semibold text-emerald-600">{formatMoney(ingresosMesCents)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500">Gastos</div>
+              <div className="mt-1 text-lg font-semibold text-red-600">{formatMoney(gastosMesCents)}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -158,6 +195,13 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             </table>
           </div>
         )}
+      </div>
+
+      {/* Ingresos vs Gastos por mes */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-slate-600">Ingresos vs Gastos por mes</h2>
+        <p className="mb-3 text-xs text-slate-400">Comparativo de los últimos 12 meses: barra azul = ingresos de ventas, barra roja = gastos.</p>
+        <ComparativoChart data={comparativoData} />
       </div>
 
       {/* Gráficos */}
