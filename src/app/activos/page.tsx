@@ -28,14 +28,35 @@ function fmtFechaInput(d: Date | null) {
 export default async function ActivosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ editar?: string }>;
+  searchParams: Promise<{ editar?: string; buscar?: string }>;
 }) {
   const sp = await searchParams;
-  const activos = await db.activo.findMany({ orderBy: { id: "desc" } });
-  const totalCosto = activos.reduce((a, x) => a + x.costoCents, 0);
-  const enEdicion = sp.editar
-    ? await db.activo.findUnique({ where: { id: Number(sp.editar) }, include: { inversion: true } })
-    : null;
+  const q = (sp.buscar ?? "").trim();
+
+  // Filtro de búsqueda por nombre o marca.
+  const filtro = q
+    ? {
+        OR: [
+          { nombre: { contains: q, mode: "insensitive" as const } },
+          { marca: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  const [activos, resumen, porEstado, enEdicion] = await Promise.all([
+    db.activo.findMany({ where: filtro, orderBy: { id: "desc" } }),
+    // Resumen de TODO el negocio (no depende del filtro de búsqueda).
+    db.activo.aggregate({ _sum: { costoCents: true }, _count: { _all: true } }),
+    db.activo.groupBy({ by: ["estado"], _count: { _all: true } }),
+    sp.editar
+      ? db.activo.findUnique({ where: { id: Number(sp.editar) }, include: { inversion: true } })
+      : Promise.resolve(null),
+  ]);
+
+  const totalInvertido = resumen._sum.costoCents ?? 0;
+  const numEquipos = resumen._count._all;
+  const conteoEstado = (estado: string) =>
+    porEstado.find((g) => g.estado === estado)?._count._all ?? 0;
 
   return (
     <div className="space-y-6">
@@ -48,9 +69,27 @@ export default async function ActivosPage({
         </p>
       </div>
 
-      <div className="w-56 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="text-xs text-slate-500">Valor total de equipos</div>
-        <div className="mt-0.5 text-xl font-bold text-slate-800">{formatMoney(totalCosto)}</div>
+      {/* Resumen del negocio completo (independiente del filtro de búsqueda). */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-500">Total invertido en equipos</div>
+          <div className="mt-0.5 text-xl font-bold text-slate-800">{formatMoney(totalInvertido)}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-500">Número de equipos</div>
+          <div className="mt-0.5 text-xl font-bold text-slate-800">{numEquipos}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-500">Equipos por estado</div>
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {ESTADOS.map((e) => (
+              <span key={e} className="flex items-baseline gap-1">
+                <span className={`font-bold ${estadoColor[e] ?? "text-slate-600"}`}>{conteoEstado(e)}</span>
+                <span className="text-xs text-slate-500">{e}</span>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       <form
@@ -126,6 +165,30 @@ export default async function ActivosPage({
         </div>
       </form>
 
+      {/* Búsqueda de equipos por nombre o marca */}
+      <form className="flex flex-wrap gap-2">
+        <input
+          name="buscar"
+          defaultValue={q}
+          placeholder="Buscar por nombre o marca…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Buscar</button>
+        {q && (
+          <a href="/activos" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      {q && (
+        <p className="text-sm text-slate-500">
+          {activos.length === 0
+            ? `No se encontraron equipos para "${q}".`
+            : `${activos.length} resultado${activos.length === 1 ? "" : "s"} para "${q}".`}
+        </p>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
@@ -141,7 +204,7 @@ export default async function ActivosPage({
             </tr>
           </thead>
           <tbody>
-            {activos.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-slate-400">Sin equipos aún.</td></tr>}
+            {activos.length === 0 && <tr><td colSpan={8} className="p-4 text-center text-slate-400">{q ? "No hay equipos que coincidan con la búsqueda." : "Sin equipos aún."}</td></tr>}
             {activos.map((a) => (
               <tr key={a.id} className="border-t border-slate-100">
                 <td className="p-3 font-medium text-slate-700">{a.nombre}<div className="text-xs text-slate-400">{a.tipo}</div></td>
