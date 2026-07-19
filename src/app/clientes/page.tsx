@@ -56,12 +56,20 @@ export default async function ClientesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">🧑‍🤝‍🧑 Clientes y cuentas por cobrar</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Registra tus clientes (solo el nombre es obligatorio). Luego, al hacer una venta,
-          podrás elegirlos escribiendo su nombre. Abajo ves cuánto te deben del fiado.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">🧑‍🤝‍🧑 Clientes y cuentas por cobrar</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Registra tus clientes (solo el nombre es obligatorio). Luego, al hacer una venta,
+            podrás elegirlos escribiendo su nombre. Abajo ves cuánto te deben del fiado.
+          </p>
+        </div>
+        <a
+          href="/api/export-clientes"
+          className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          ⬇️ Exportar (Excel)
+        </a>
       </div>
 
       {sp.error === "nombre" && (
