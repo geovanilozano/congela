@@ -21,19 +21,55 @@ export default async function ProduccionPage({
   searchParams: Promise<{ editar?: string; desde?: string; hasta?: string }>;
 }) {
   const sp = await searchParams;
-  const [registros, activos, empleados, enEdicion] = await Promise.all([
-    db.produccion.findMany({
-      where: { fecha: rangoFechas(sp) },
-      include: { activo: true, empleado: true },
-      orderBy: { fecha: "desc" },
-    }),
-    db.activo.findMany({ where: { tipo: "cubetero" }, orderBy: { nombre: "asc" } }),
-    db.empleado.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
-    sp.editar ? db.produccion.findUnique({ where: { id: Number(sp.editar) } }) : null,
-  ]);
+
+  // Rango del MES ACTUAL en hora local (nunca toISOString): del día 1 al último día.
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0, 0);
+  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+  const rangoMes = { gte: inicioMes, lte: finMes };
+  const nombreMes = ahora.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+
+  const [registros, activos, empleados, enEdicion, resumenMes, bolsasPorEmpleado] =
+    await Promise.all([
+      db.produccion.findMany({
+        where: { fecha: rangoFechas(sp) },
+        include: { activo: true, empleado: true },
+        orderBy: { fecha: "desc" },
+      }),
+      db.activo.findMany({ where: { tipo: "cubetero" }, orderBy: { nombre: "asc" } }),
+      db.empleado.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
+      sp.editar ? db.produccion.findUnique({ where: { id: Number(sp.editar) } }) : null,
+      db.produccion.aggregate({
+        where: { fecha: rangoMes },
+        _sum: { bolsas: true, perdidas: true },
+      }),
+      db.produccion.groupBy({
+        by: ["empleadoId"],
+        where: { fecha: rangoMes },
+        _sum: { bolsas: true },
+      }),
+    ]);
 
   const totalBolsas = registros.reduce((a, r) => a + r.bolsas, 0);
   const totalPerdidas = registros.reduce((a, r) => a + r.perdidas, 0);
+
+  // Resumen del mes actual.
+  const bolsasMes = resumenMes._sum.bolsas ?? 0;
+  const perdidasMes = resumenMes._sum.perdidas ?? 0;
+
+  // Nombre de cada empleado por id (los inactivos no aparecen en la lista).
+  const nombresEmpleado = new Map(empleados.map((e) => [e.id, e.nombre]));
+  const desgloseEmpleados = bolsasPorEmpleado
+    .map((g) => ({
+      empleadoId: g.empleadoId,
+      nombre:
+        g.empleadoId == null
+          ? "Sin asignar"
+          : nombresEmpleado.get(g.empleadoId) ?? "Empleado retirado",
+      bolsas: g._sum.bolsas ?? 0,
+    }))
+    .filter((g) => g.bolsas > 0)
+    .sort((a, b) => b.bolsas - a.bolsas);
 
   return (
     <div className="space-y-6">
@@ -45,13 +81,42 @@ export default async function ProduccionPage({
         </p>
       </div>
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold capitalize text-slate-700">Resumen de {nombreMes}</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
+            <div className="text-xs text-sky-600">Bolsas producidas este mes</div>
+            <div className="mt-0.5 text-2xl font-bold text-sky-700">{bolsasMes}</div>
+          </div>
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <div className="text-xs text-red-600">Pérdidas / merma este mes</div>
+            <div className="mt-0.5 text-2xl font-bold text-red-600">{perdidasMes}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-1">
+            <div className="text-xs text-slate-500">Bolsas por empleado</div>
+            {desgloseEmpleados.length === 0 ? (
+              <div className="mt-1 text-sm text-slate-400">Sin producción este mes.</div>
+            ) : (
+              <ul className="mt-1.5 space-y-1">
+                {desgloseEmpleados.map((e) => (
+                  <li key={e.empleadoId ?? "sin-asignar"} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{e.nombre}</span>
+                    <span className="font-semibold text-sky-700">{e.bolsas}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-3 sm:max-w-md">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-500">Bolsas producidas</div>
+          <div className="text-xs text-slate-500">Bolsas producidas (filtro)</div>
           <div className="mt-0.5 text-xl font-bold text-sky-700">{totalBolsas}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-500">Pérdidas / merma</div>
+          <div className="text-xs text-slate-500">Pérdidas / merma (filtro)</div>
           <div className="mt-0.5 text-xl font-bold text-red-600">{totalPerdidas}</div>
         </div>
       </div>
