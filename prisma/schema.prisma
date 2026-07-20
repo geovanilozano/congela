@@ -128,6 +128,7 @@ model Cliente {
   correo    String?
   tipo      String   @default("contado") // "contado" | "credito"
   ventas    Venta[]
+  medidores MedidorCliente[]
   createdAt DateTime @default(now())
 
   @@index([nombre])
@@ -389,4 +390,47 @@ model Mantenimiento {
 
   @@index([activoId])
   @@index([fechaProgramada])
+}
+
+// ---------------------------------------------------------------------------
+// Sub-medición: medidores instalados a clientes (se les revende energía) y la
+// liquidación de cada periodo, calcada de cómo cobra el operador de red (ESSA).
+// ---------------------------------------------------------------------------
+model MedidorCliente {
+  id            Int                  @id @default(autoincrement())
+  clienteId     Int?
+  cliente       Cliente?             @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  numero        String
+  marca         String?
+  direccion     String?
+  factor        Int                  @default(1) // factor de multiplicación del medidor
+  nota          String?
+  activo        Boolean              @default(true)
+  liquidaciones LiquidacionMedidor[]
+  createdAt     DateTime             @default(now())
+
+  @@index([clienteId])
+}
+
+model LiquidacionMedidor {
+  id                  Int            @id @default(autoincrement())
+  medidorId           Int
+  medidor             MedidorCliente @relation(fields: [medidorId], references: [id], onDelete: Cascade)
+  fechaAnterior       DateTime
+  fechaActual         DateTime
+  lecturaAnterior     Int            // kWh
+  lecturaActual       Int            // kWh
+  factor              Int            @default(1) // se copia del medidor: la liquidación es inmutable
+  fotoUrl             String?
+  tarifaCuCents       Int            // centavos de peso por kWh (ej. 824.03 $/kWh -> 82403)
+  subsidioCents       Int            @default(0) // descuento del extracto
+  alumbradoTotalCents Int            @default(0)
+  alumbradoPct        Float          @default(0) // % que paga el cliente (0-100)
+  aseoTotalCents      Int            @default(0)
+  aseoPct             Float          @default(0)
+  pagada              Boolean        @default(false)
+  pagadaEn            DateTime?
+  createdAt           DateTime       @default(now())
+
+  @@index([medidorId])
 }
