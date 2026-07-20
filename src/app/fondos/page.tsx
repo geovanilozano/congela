@@ -37,13 +37,16 @@ function describirRegla(regla: {
 export default async function FondosPage() {
   await ensureFondos();
 
-  const fondos = await db.fondo.findMany({
-    include: { regla: true, movimientos: true },
-    orderBy: { regla: { prioridad: "asc" } },
-  });
+  // El saldo de cada fondo se pide agregado (suma de movimientos por fondoId) en vez de
+  // traer todos los movimientos: es la tabla que más crece (una fila por fondo en cada cierre).
+  const [fondos, saldosFondo] = await Promise.all([
+    db.fondo.findMany({ include: { regla: true }, orderBy: { regla: { prioridad: "asc" } } }),
+    db.movimientoFondo.groupBy({ by: ["fondoId"], _sum: { montoCents: true } }),
+  ]);
 
   // Saldo por fondo y total general (para calcular el peso relativo de cada barra).
-  const saldos = fondos.map((f) => f.movimientos.reduce((a, m) => a + m.montoCents, 0));
+  const saldoPorFondoId = new Map(saldosFondo.map((g) => [g.fondoId, g._sum.montoCents ?? 0]));
+  const saldos = fondos.map((f) => saldoPorFondoId.get(f.id) ?? 0);
   const totalSaldo = saldos.reduce((a, s) => a + s, 0);
   const baseReparto = saldos.reduce((a, s) => a + Math.max(0, s), 0);
 

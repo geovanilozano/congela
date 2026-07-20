@@ -168,7 +168,7 @@ export default async function ClientesPage({
                     {raw?.correo && <span>✉️ {raw.correo}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-6 text-right">
+                <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-right">
                   <div>
                     <div className="text-xs text-slate-500">Total comprado</div>
                     <div className="font-medium text-slate-700">{formatMoney(c.totalCompradoCents)}</div>

@@ -21,35 +21,44 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const rango = rangoFechas(sp);
 
-  const [inversiones, gastos, producciones, ventas, ventaItems, fondos, cierres, ventasTodas, gastosTodos] = await Promise.all([
-    db.inversion.findMany(),
-    db.compraGasto.findMany({ where: { fecha: rango } }),
-    db.produccion.findMany({ where: { fecha: rango } }),
-    db.venta.findMany({ where: { fecha: rango } }),
-    db.ventaItem.findMany({ where: { venta: { fecha: rango } } }),
-    db.fondo.findMany({ include: { movimientos: true } }),
+  const hoy = new Date();
+  // La tendencia y el comparativo solo muestran los últimos 6-12 meses: se acota el escaneo
+  // de historia a ~13 meses en vez de traer TODA la venta/gasto desde el inicio del negocio.
+  const desdeHistorial = new Date(hoy.getFullYear(), hoy.getMonth() - 12, 1);
+
+  // Las sumas se piden agregadas a la base (aggregate/groupBy) en vez de traer las tablas
+  // completas de ventas, gastos, ítems, producción y movimientos solo para reducirlas en JS.
+  const [invAgg, gastosPorCat, produccionAgg, ventasAgg, ventaItemsAgg, utilidadAgg, cierres, ventasTodas, gastosTodos] = await Promise.all([
+    db.inversion.aggregate({ _sum: { valorCents: true } }),
+    db.compraGasto.groupBy({ by: ["categoria"], where: { fecha: rango }, _sum: { valorCents: true } }),
+    db.produccion.aggregate({ where: { fecha: rango }, _sum: { bolsas: true } }),
+    db.venta.aggregate({ where: { fecha: rango }, _sum: { totalCents: true } }),
+    db.ventaItem.aggregate({ where: { venta: { fecha: rango } }, _sum: { cantidad: true } }),
+    db.movimientoFondo.aggregate({ where: { fondo: { nombre: "Utilidad" } }, _sum: { montoCents: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
-    // Tendencia: todas las ventas/gastos (sin el filtro de fecha), para ver la historia.
-    db.venta.findMany({ select: { fecha: true, totalCents: true } }),
-    db.compraGasto.findMany({ select: { fecha: true, valorCents: true } }),
+    // Tendencia: ventas/gastos de los últimos ~13 meses (sin el filtro de fecha del usuario).
+    db.venta.findMany({ where: { fecha: { gte: desdeHistorial } }, select: { fecha: true, totalCents: true } }),
+    db.compraGasto.findMany({ where: { fecha: { gte: desdeHistorial } }, select: { fecha: true, valorCents: true } }),
   ]);
 
-  const invertidoCents = inversiones.reduce((a, i) => a + i.valorCents, 0);
-  const gastosCents = gastos.reduce((a, g) => a + g.valorCents, 0);
-  const bolsasProducidas = producciones.reduce((a, p) => a + p.bolsas, 0);
-  const bolsasVendidas = ventaItems.reduce((a, v) => a + v.cantidad, 0);
-  const ingresosCents = ventas.reduce((a, v) => a + v.totalCents, 0);
-  const utilidadCents = fondos.find((f) => f.nombre === "Utilidad")?.movimientos.reduce((a, m) => a + m.montoCents, 0) ?? 0;
+  const invertidoCents = invAgg._sum.valorCents ?? 0;
+  const gastosCents = gastosPorCat.reduce((a, g) => a + (g._sum.valorCents ?? 0), 0);
+  const bolsasProducidas = produccionAgg._sum.bolsas ?? 0;
+  const bolsasVendidas = ventaItemsAgg._sum.cantidad ?? 0;
+  const ingresosCents = ventasAgg._sum.totalCents ?? 0;
+  const utilidadCents = utilidadAgg._sum.montoCents ?? 0;
 
   const precioPromedioCents = bolsasVendidas > 0 ? Math.round(ingresosCents / bolsasVendidas) : 0;
   const costoBolsaCents = costoPorBolsa(gastosCents, bolsasProducidas); // null si no hubo producción
   const margenCents = margenPorBolsa(precioPromedioCents, costoBolsaCents); // null si el costo es indefinido
   const puntoEq = puntoEquilibrio(gastosCents, margenCents);
   const roi = recuperacionInversion(invertidoCents, utilidadCents);
+  // La barra nunca debe ir a ancho negativo (utilidad acumulada &lt; 0) ni pasar de 100%.
+  const roiPct = Math.max(0, Math.min(100, roi.porcentaje));
   const utilidadNeta = ingresosCents - gastosCents;
 
   const gastosPorCategoria = CATEGORIAS
-    .map((c) => ({ nombre: c, saldo: gastos.filter((g) => g.categoria === c).reduce((a, g) => a + g.valorCents, 0) }))
+    .map((c) => ({ nombre: c, saldo: gastosPorCat.find((g) => g.categoria === c)?._sum.valorCents ?? 0 }))
     .filter((c) => c.saldo > 0);
   const ingresosData = cierres.map((c) => ({ label: `#${c.id}`, total: c.totalCents }));
 
@@ -61,7 +70,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const comparativoData = mesesTodos.slice(-12).map((m) => ({ mes: etiquetaMes(m.mes), ingresos: m.ingresosCents, gastos: m.gastosCents }));
 
   // Utilidad neta del MES ACTUAL (ingresos del mes − gastos del mes), en hora local.
-  const hoy = new Date();
   const claveMesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
   const mesActual = mesesTodos.find((m) => m.mes === claveMesActual);
   const ingresosMesCents = mesActual?.ingresosCents ?? 0;
@@ -105,10 +113,10 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           )}
         </div>
         <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full bg-emerald-500" style={{ width: `${roi.porcentaje}%` }} />
+          <div className="h-full bg-emerald-500" style={{ width: `${roiPct}%` }} />
         </div>
         <div className="mt-2 text-sm text-slate-500">
-          {roi.porcentaje}% recuperado · Invertido {formatMoney(invertidoCents)} · Utilidad acumulada {formatMoney(utilidadCents)}
+          {roiPct}% recuperado · Invertido {formatMoney(invertidoCents)} · Utilidad acumulada {formatMoney(utilidadCents)}
         </div>
       </div>
 

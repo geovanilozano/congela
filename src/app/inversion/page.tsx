@@ -31,17 +31,16 @@ export default async function InversionPage({
     : undefined;
 
   // Los resúmenes son de TODO el negocio (no dependen del filtro de búsqueda).
-  const [enEdicion, items, aggTotal, aggContado, aggCredito] = await Promise.all([
+  // Un solo groupBy por forma de pago cubre el total, el de contado y el de crédito.
+  const [enEdicion, items, porFormaPago] = await Promise.all([
     sp.editar ? db.inversion.findUnique({ where: { id: Number(sp.editar) } }) : Promise.resolve(null),
     db.inversion.findMany({ where: filtro, orderBy: { fecha: "desc" } }),
-    db.inversion.aggregate({ _sum: { valorCents: true } }),
-    db.inversion.aggregate({ where: { formaPago: "contado" }, _sum: { valorCents: true } }),
-    db.inversion.aggregate({ where: { formaPago: "credito" }, _sum: { valorCents: true } }),
+    db.inversion.groupBy({ by: ["formaPago"], _sum: { valorCents: true } }),
   ]);
 
-  const total = aggTotal._sum.valorCents ?? 0;
-  const totalContado = aggContado._sum.valorCents ?? 0;
-  const totalCredito = aggCredito._sum.valorCents ?? 0;
+  const totalContado = porFormaPago.find((g) => g.formaPago === "contado")?._sum.valorCents ?? 0;
+  const totalCredito = porFormaPago.find((g) => g.formaPago === "credito")?._sum.valorCents ?? 0;
+  const total = porFormaPago.reduce((a, g) => a + (g._sum.valorCents ?? 0), 0);
 
   return (
     <div className="space-y-6">

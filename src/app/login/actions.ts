@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { crearSesion, cerrarSesion } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { randomBytes } from "node:crypto";
 
 export async function registrarPrimerUsuario(formData: FormData) {
   // Solo permitido si aún no hay ningún usuario (crea el Dueño inicial).
@@ -21,12 +22,19 @@ export async function registrarPrimerUsuario(formData: FormData) {
   redirect("/");
 }
 
+// Hash señuelo (formato válido, clave imposible de adivinar). Si el usuario no existe,
+// igual verificamos contra este para gastar el mismo tiempo de scrypt: así el tiempo de
+// respuesta no delata qué nombres de usuario existen.
+const HASH_SENUELO = hashPassword(randomBytes(16).toString("hex"));
+
 export async function iniciarSesion(formData: FormData) {
   const usuario = String(formData.get("usuario") || "").trim().toLowerCase();
   const clave = String(formData.get("clave") || "");
 
   const u = await db.usuario.findUnique({ where: { usuario } });
-  if (!u || !u.activo || !verifyPassword(clave, u.passwordHash)) {
+  // Se verifica SIEMPRE (contra el señuelo si el usuario no existe) para no filtrar por tiempo.
+  const claveOk = verifyPassword(clave, u?.passwordHash ?? HASH_SENUELO);
+  if (!u || !u.activo || !claveOk) {
     redirect("/login?error=1");
   }
   await crearSesion({ userId: u.id, rol: u.rol, nombre: u.nombre });

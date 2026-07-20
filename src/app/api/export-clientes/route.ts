@@ -24,6 +24,13 @@ export async function GET() {
   const sesion = await getSesion();
   if (!sesion) return new Response("Necesitas iniciar sesión.", { status: 401 });
 
+  // Autorización REAL por rol: este archivo expone datos personales de los clientes
+  // (nombre, teléfono, cédula, correo y saldo). Solo dueño o cajero; nunca el operario,
+  // aunque su token optimista aún diga otra cosa.
+  if (sesion.rol !== "dueno" && sesion.rol !== "cajero") {
+    return new Response("No tienes permiso para exportar los clientes.", { status: 403 });
+  }
+
   const [clientes, ventas] = await Promise.all([
     db.cliente.findMany({ orderBy: { nombre: "asc" } }),
     db.venta.findMany({

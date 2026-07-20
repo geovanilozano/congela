@@ -32,13 +32,13 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
   const inicioMesSiguiente = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1);
 
-  const [empleados, enEdicion, empleadosActivos, nominaMesAgg] = await Promise.all([
+  const [empleados, enEdicion, empleadosActivos, nominaMesAgg, pagosPorEmpleado, bolsasPorEmpleado] = await Promise.all([
     db.empleado.findMany({
       where: filtro,
+      // Solo las últimas 5 asistencias por empleado: lo pagado y las bolsas se piden agregados
+      // aparte (groupBy) en vez de traer TODOS los pagos y producciones de cada empleado.
       include: {
         asistencias: { orderBy: { fecha: "desc" }, take: 5 },
-        pagos: true,
-        producciones: true,
       },
       orderBy: { nombre: "asc" },
     }),
@@ -49,9 +49,13 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
       _sum: { valorCents: true },
       where: { fecha: { gte: inicioMes, lt: inicioMesSiguiente } },
     }),
+    db.pagoNomina.groupBy({ by: ["empleadoId"], _sum: { valorCents: true } }),
+    db.produccion.groupBy({ by: ["empleadoId"], _sum: { bolsas: true } }),
   ]);
 
   const nominaMes = nominaMesAgg._sum.valorCents ?? 0;
+  const pagadoPorEmpleado = new Map(pagosPorEmpleado.map((g) => [g.empleadoId, g._sum.valorCents ?? 0]));
+  const bolsasDeEmpleado = new Map(bolsasPorEmpleado.map((g) => [g.empleadoId, g._sum.bolsas ?? 0]));
 
   return (
     <div className="space-y-6">
@@ -147,8 +151,8 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
           </p>
         )}
         {empleados.map((e) => {
-          const totalPagado = e.pagos.reduce((s, p) => s + p.valorCents, 0);
-          const bolsas = e.producciones.reduce((s, p) => s + p.bolsas, 0);
+          const totalPagado = pagadoPorEmpleado.get(e.id) ?? 0;
+          const bolsas = bolsasDeEmpleado.get(e.id) ?? 0;
           return (
             <div key={e.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between">

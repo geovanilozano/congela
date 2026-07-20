@@ -16,6 +16,11 @@ export async function POST(request: Request) {
   }
 
   const f = file as File;
+  // Tope de tamaño: leer con IA cuesta por imagen, y una foto de recibo cabe de sobra en
+  // 8 MB. Se rechaza antes de convertir a base64 y llamar a la API.
+  if (f.size > 8 * 1024 * 1024) {
+    return Response.json({ ok: false, error: "La imagen es demasiado grande (máx. 8 MB)." }, { status: 413 });
+  }
   const base64 = Buffer.from(await f.arrayBuffer()).toString("base64");
   const resultado = await leerRecibo(base64, f.type || "image/jpeg");
 

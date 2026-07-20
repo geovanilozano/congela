@@ -21,15 +21,19 @@ export default async function Home() {
   const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   const inicio14 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 13);
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
-    db.inversion.findMany(),
+  // Las sumas se piden a la base con aggregate/groupBy en vez de traer tablas enteras solo
+  // para sumarlas en JS: gastos, energía y movimientos de fondos crecen a diario y esto es
+  // el tablero (se carga en cada visita).
+  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
+    db.inversion.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
-    db.fondo.findMany({ include: { regla: true, movimientos: true } }),
-    db.energiaGeneracion.findMany(),
-    db.medidorLectura.findMany(),
+    db.fondo.findMany({ include: { regla: true } }),
+    db.movimientoFondo.groupBy({ by: ["fondoId"], _sum: { montoCents: true } }),
+    db.energiaGeneracion.aggregate({ _sum: { kwh: true } }),
+    db.medidorLectura.aggregate({ _sum: { kwh: true } }),
     getAjusteNumero("precioKwhCents", 0),
-    db.compraGasto.findMany(),
+    db.compraGasto.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.insumoInventario.findMany(),
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
@@ -37,15 +41,15 @@ export default async function Home() {
     db.venta.findMany({ where: { fecha: { gte: inicio14 } }, select: { fecha: true, totalCents: true } }),
   ]);
 
-  const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
+  const totalGastos = gastoAgg._sum.valorCents ?? 0;
 
   const balEnergia = balanceEnergia({
-    generacionKwh: generaciones.reduce((a, g) => a + g.kwh, 0),
-    consumoKwh: consumos.reduce((a, c) => a + c.kwh, 0),
+    generacionKwh: genAgg._sum.kwh ?? 0,
+    consumoKwh: consAgg._sum.kwh ?? 0,
     precioKwhCents,
   });
 
-  const totalInvertido = inversiones.reduce((a, i) => a + i.valorCents, 0);
+  const totalInvertido = invAgg._sum.valorCents ?? 0;
   const ingresosTotales = cierres.reduce((a, c) => a + c.totalCents, 0);
 
   // Crédito: lo que falta por pagar y el avance, según lo abonado (soporta pagos parciales).
@@ -55,8 +59,12 @@ export default async function Home() {
   const saldoCredito = totalCredito - totalAbonado;
   const avance = totalCredito > 0 ? Math.round((totalAbonado / totalCredito) * 100) : 0;
 
-  const saldoFondo = (nombre: string) =>
-    fondos.find((f) => f.nombre === nombre)?.movimientos.reduce((a, m) => a + m.montoCents, 0) ?? 0;
+  // Saldo de cada fondo = suma de sus movimientos (una sola consulta agregada por fondoId).
+  const saldoPorFondoId = new Map(saldosFondo.map((g) => [g.fondoId, g._sum.montoCents ?? 0]));
+  const saldoFondo = (nombre: string) => {
+    const f = fondos.find((x) => x.nombre === nombre);
+    return f ? saldoPorFondoId.get(f.id) ?? 0 : 0;
+  };
   const utilidad = saldoFondo("Utilidad");
 
   // Proyección: cuánto pasará a utilidad cuando se pague el crédito.
@@ -65,7 +73,7 @@ export default async function Home() {
 
   const fondosData = fondos.map((f) => ({
     nombre: f.nombre,
-    saldo: f.movimientos.reduce((a, m) => a + m.montoCents, 0),
+    saldo: saldoPorFondoId.get(f.id) ?? 0,
   }));
   const ingresosData = cierres.map((c) => ({
     label: new Date(c.fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }),
@@ -94,17 +102,16 @@ export default async function Home() {
 
   // ¿La base está prácticamente vacía? Mostrar una guía de primeros pasos.
   const sinDatos =
-    inversiones.length === 0 &&
+    invAgg._count === 0 &&
     creditos.length === 0 &&
     cierres.length === 0 &&
-    gastos.length === 0 &&
+    gastoAgg._count === 0 &&
     insumos.length === 0;
 
   // Centro de alertas: cuotas del crédito, inventario, mantenimiento y cierre de caja.
   const hoy = new Date();
-  const todasLasCuotas = creditos.flatMap((c) => c.cuotas);
-  const cuotasVencidas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida");
-  const cuotasProximas = todasLasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima");
+  const cuotasVencidas = todasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida");
+  const cuotasProximas = todasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima");
   const insumosBajos = bajoStock(insumos);
   const mantVencidos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "vencido").length;
   const mantProximos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "proximo").length;

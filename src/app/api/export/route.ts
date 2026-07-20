@@ -25,6 +25,13 @@ export async function GET(request: Request) {
   const sesion = await getSesion();
   if (!sesion) return new Response("Necesitas iniciar sesión.", { status: 401 });
 
+  // Autorización REAL por rol (el proxy es optimista y usa el rol del token, que puede
+  // estar desactualizado hasta 30 días). Exportar ventas/gastos es de dueño o cajero;
+  // el operario no debe descargar nada de aquí.
+  if (sesion.rol !== "dueno" && sesion.rol !== "cajero") {
+    return new Response("No tienes permiso para exportar datos.", { status: 403 });
+  }
+
   const tipo = new URL(request.url).searchParams.get("tipo") ?? "ventas";
 
   // El respaldo se lleva TODA la base de datos (incluidos sueldos y usuarios): solo el dueño.

@@ -8,11 +8,46 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
+import { Prisma } from "@/generated/prisma/client";
 
+// Suma meses SIN el desbordamiento clásico de JS: un crédito que arranca el 31-ene no
+// debe correr su cuota 1 a marzo (JS convertiría "31-feb" en 3-mar). Si el día original
+// no existe en el mes destino, se ancla al último día de ese mes.
 function sumarMeses(base: Date, meses: number): Date {
+  const dia = base.getDate();
   const d = new Date(base);
+  d.setDate(1);
   d.setMonth(d.getMonth() + meses);
+  const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(dia, ultimoDia));
   return d;
+}
+
+// El fondo "Crédito" debe apartar en cada cierre la suma de la PRÓXIMA cuota pendiente
+// de CADA crédito activo. Recalcularlo (en vez de pisar el valor con la cuota de un solo
+// crédito) mantiene correcta la reserva cuando hay varios créditos a la vez, y desactiva
+// el fondo únicamente cuando ya no queda ningún crédito por pagar.
+async function recalcularFondoCredito(tx: Prisma.TransactionClient) {
+  const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });
+  if (!fondoCredito?.regla) return;
+
+  const activos = await tx.credito.findMany({ where: { estado: { not: "pagado" } }, select: { id: true } });
+  let reservaCents = 0;
+  for (const c of activos) {
+    const prox = await tx.cuotaAmortizacion.findFirst({
+      where: { creditoId: c.id, estado: { not: "pagada" } },
+      orderBy: { numero: "asc" },
+      select: { cuotaCents: true },
+    });
+    reservaCents += prox?.cuotaCents ?? 0;
+  }
+
+  await tx.reglaReparto.update({
+    where: { id: fondoCredito.regla.id },
+    data: reservaCents > 0
+      ? { tipo: "fijo", valorCents: reservaCents, activo: true }
+      : { activo: false },
+  });
 }
 
 export async function crearCredito(formData: FormData) {
@@ -32,37 +67,33 @@ export async function crearCredito(formData: FormData) {
   const tasaMensual = tasaMensualPct / 100;
   const tabla = generarAmortizacion({ montoCents, tasaMensual, numCuotas });
 
-  await db.credito.create({
-    data: {
-      entidad,
-      montoCents,
-      tasaMensual,
-      numCuotas,
-      fechaInicio,
-      cuotas: {
-        create: tabla.map((c) => ({
-          numero: c.numero,
-          fechaVencimiento: sumarMeses(fechaInicio, c.numero),
-          cuotaCents: c.cuotaCents,
-          capitalCents: c.capitalCents,
-          interesCents: c.interesCents,
-          saldoCents: c.saldoCents,
-        })),
+  // Crear el crédito y ajustar el fondo van juntos: si algo falla, no queremos un crédito
+  // creado con el fondo sin actualizar (ni viceversa).
+  await db.$transaction(async (tx) => {
+    await tx.credito.create({
+      data: {
+        entidad,
+        montoCents,
+        tasaMensual,
+        numCuotas,
+        fechaInicio,
+        cuotas: {
+          create: tabla.map((c) => ({
+            numero: c.numero,
+            fechaVencimiento: sumarMeses(fechaInicio, c.numero),
+            cuotaCents: c.cuotaCents,
+            capitalCents: c.capitalCents,
+            interesCents: c.interesCents,
+            saldoCents: c.saldoCents,
+          })),
+        },
       },
-    },
-  });
-
-  // El fondo "Crédito" aparta automáticamente el valor de la cuota en cada cierre.
-  const fondoCredito = await db.fondo.findUnique({
-    where: { nombre: "Crédito" },
-    include: { regla: true },
-  });
-  if (fondoCredito?.regla) {
-    await db.reglaReparto.update({
-      where: { id: fondoCredito.regla.id },
-      data: { tipo: "fijo", valorCents: tabla[0]?.cuotaCents ?? 0, activo: true },
     });
-  }
+
+    // El fondo "Crédito" aparta automáticamente en cada cierre la suma de las próximas
+    // cuotas de TODOS los créditos activos (incluido el que se acaba de crear).
+    await recalcularFondoCredito(tx);
+  });
 
   revalidatePath("/credito");
   revalidatePath("/fondos");
@@ -109,12 +140,10 @@ export async function registrarPago(formData: FormData) {
     const faltan = await tx.cuotaAmortizacion.count({ where: { creditoId, estado: { not: "pagada" } } });
     if (faltan === 0) {
       await tx.credito.update({ where: { id: creditoId }, data: { estado: "pagado" } });
-      // El dinero de la cuota deja de apartarse -> pasa a utilidad.
-      const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });
-      if (fondoCredito?.regla) {
-        await tx.reglaReparto.update({ where: { id: fondoCredito.regla.id }, data: { activo: false } });
-      }
     }
+    // Reajustar la reserva del fondo a las próximas cuotas de los créditos que sigan
+    // activos: baja al pagar una cuota y se desactiva solo cuando ya no queda ninguno.
+    await recalcularFondoCredito(tx);
   });
 
   revalidatePath("/credito");

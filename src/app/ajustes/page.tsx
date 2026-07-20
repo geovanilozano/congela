@@ -78,7 +78,7 @@ export default async function AjustesPage({
         <form action={crearUsuario} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <input name="nombre" required placeholder="Nombre" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
           <input name="usuario" required placeholder="Usuario (para entrar)" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-          <input name="clave" required type="text" placeholder="Clave (mín. 4)" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+          <input name="clave" required type="password" autoComplete="new-password" placeholder="Clave (mín. 4)" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
           <select name="rol" defaultValue="operario" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
             {ROLES.map((r) => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
           </select>
