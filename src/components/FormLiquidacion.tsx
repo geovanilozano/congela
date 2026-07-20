@@ -18,6 +18,7 @@ export function FormLiquidacion({
   fechaAnteriorDefault,
   subsidioPctDefault,
   subsistenciaDefault,
+  alumbradoTotalDefault,
   alumbradoPctDefault,
   consumoTotalDefault,
 }: {
@@ -29,6 +30,7 @@ export function FormLiquidacion({
   fechaAnteriorDefault: string;
   subsidioPctDefault: number;
   subsistenciaDefault: number;
+  alumbradoTotalDefault: number | null;
   alumbradoPctDefault: number;
   consumoTotalDefault: number | null;
 }) {
@@ -39,6 +41,7 @@ export function FormLiquidacion({
     subsidioPct: String(subsidioPctDefault),
     subsistenciaKwh: String(subsistenciaDefault),
     consumoTotalKwh: consumoTotalDefault ? String(consumoTotalDefault) : "",
+    alumbradoTotalPesos: alumbradoTotalDefault ? String(alumbradoTotalDefault) : "",
     alumbradoPct: String(alumbradoPctDefault),
     aseoTotalPesos: "",
     aseoPct: "",
@@ -60,6 +63,7 @@ export function FormLiquidacion({
     subsidioPct: num(f.subsidioPct),
     subsistenciaKwh: num(f.subsistenciaKwh),
     consumoTotalKwh: num(f.consumoTotalKwh),
+    alumbradoTotalCents: Math.round(num(f.alumbradoTotalPesos) * 100),
     alumbradoPct: num(f.alumbradoPct),
     aseoTotalCents: Math.round(num(f.aseoTotalPesos) * 100),
     aseoPct: num(f.aseoPct),
@@ -111,10 +115,6 @@ export function FormLiquidacion({
               <input {...numProps} name="subsidioPct" value={f.subsidioPct} onChange={set("subsidioPct")} placeholder="50" className={inputCls} />
             </label>
             <label className="text-sm">
-              <span className="text-slate-500">Alumbrado público (% de la energía)</span>
-              <input {...numProps} name="alumbradoPct" value={f.alumbradoPct} onChange={set("alumbradoPct")} placeholder="6" className={inputCls} />
-            </label>
-            <label className="text-sm">
               <span className="text-slate-500">Consumo de subsistencia (kWh)</span>
               <input {...numProps} name="subsistenciaKwh" value={f.subsistenciaKwh} onChange={set("subsistenciaKwh")} placeholder="173" className={inputCls} />
             </label>
@@ -133,16 +133,31 @@ export function FormLiquidacion({
           </p>
         </div>
 
-        {/* Aseo (opcional) */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="text-slate-500">Aseo total del extracto ($) — opcional</span>
-            <input {...numProps} name="aseoTotalPesos" value={f.aseoTotalPesos} onChange={set("aseoTotalPesos")} placeholder="0" className={inputCls} />
-          </label>
-          <label className="text-sm">
-            <span className="text-slate-500">% de aseo que paga el cliente</span>
-            <input {...numProps} name="aseoPct" value={f.aseoPct} onChange={set("aseoPct")} placeholder="0" className={inputCls} />
-          </label>
+        {/* Alumbrado y aseo: se escribe el valor total del recibo y el % que paga el cliente */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Alumbrado y aseo (del recibo)</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="text-slate-500">Alumbrado público total ($)</span>
+              <input {...numProps} name="alumbradoTotalPesos" value={f.alumbradoTotalPesos} onChange={set("alumbradoTotalPesos")} placeholder="31272" className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">% de alumbrado que paga el cliente</span>
+              <input {...numProps} name="alumbradoPct" value={f.alumbradoPct} onChange={set("alumbradoPct")} placeholder="50" className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">Aseo total del extracto ($) — opcional</span>
+              <input {...numProps} name="aseoTotalPesos" value={f.aseoTotalPesos} onChange={set("aseoTotalPesos")} placeholder="0" className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">% de aseo que paga el cliente</span>
+              <input {...numProps} name="aseoPct" value={f.aseoPct} onChange={set("aseoPct")} placeholder="0" className={inputCls} />
+            </label>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">
+            Escribí el valor TOTAL del alumbrado del recibo ($31.272 ≈ 6% de la energía) y el % que
+            paga este cliente. Si son dos, poné 50% a cada uno; el resultado es lo que se le suma.
+          </p>
         </div>
 
         {/* Foto de la lectura */}

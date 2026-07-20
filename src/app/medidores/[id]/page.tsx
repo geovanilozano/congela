@@ -70,7 +70,8 @@ export default async function MedidorDetallePage({
           fechaAnteriorDefault={ultima ? fechaParaInput(ultima.fechaActual) : ""}
           subsidioPctDefault={ultima ? ultima.subsidioPct : 50}
           subsistenciaDefault={ultima ? ultima.subsistenciaKwh : 173}
-          alumbradoPctDefault={ultima ? ultima.alumbradoPct : 6}
+          alumbradoTotalDefault={ultima ? ultima.alumbradoTotalCents / 100 : null}
+          alumbradoPctDefault={ultima ? ultima.alumbradoPct : 50}
           consumoTotalDefault={ultima ? ultima.consumoTotalKwh : null}
         />
       </section>

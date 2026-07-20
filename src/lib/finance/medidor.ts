@@ -18,7 +18,8 @@ export interface EntradaLiquidacion {
   subsidioPct: number; // % del extracto (ej. 47, 50)
   subsistenciaKwh: number; // tope de kWh subsidiados
   consumoTotalKwh: number; // consumo TOTAL del recibo (0 = este medidor es el único)
-  alumbradoPct: number; // % de la energía (ej. 6)
+  alumbradoTotalCents: number; // valor total del alumbrado del extracto
+  alumbradoPct: number; // % del alumbrado total que paga el cliente
   aseoTotalCents: number; // cargo fijo de aseo del extracto
   aseoPct: number; // % de aseo que paga el cliente
 }
@@ -57,8 +58,9 @@ export function liquidarMedidor(e: EntradaLiquidacion): ResultadoLiquidacion {
   // La parte de kWh subsidiados que le corresponde a ESTE medidor (para mostrarla).
   const kwhSubsidiado = Math.round(kwhSubsidiadoRecibo * proporcion);
 
-  // Alumbrado público: un % del valor de la energía.
-  const alumbradoClienteCents = Math.round(energiaCents * (pctValido(e.alumbradoPct) / 100));
+  // Alumbrado público: un % del valor TOTAL del alumbrado del extracto (así se reparte
+  // entre los medidores del recibo, igual que el aseo).
+  const alumbradoClienteCents = Math.round(Math.max(0, e.alumbradoTotalCents) * (pctValido(e.alumbradoPct) / 100));
 
   // Aseo: un % de un cargo fijo del extracto (opcional).
   const aseoClienteCents = Math.round(Math.max(0, e.aseoTotalCents) * (pctValido(e.aseoPct) / 100));

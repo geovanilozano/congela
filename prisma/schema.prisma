@@ -430,8 +430,10 @@ model LiquidacionMedidor {
   // subsidio del recibo (uno solo) se reparte entre los medidores proporcional a su consumo.
   // 0 = este medidor es el único del recibo (el subsidio se aplica completo a su consumo).
   consumoTotalKwh     Int            @default(0)
-  // Alumbrado público: % del valor de la energía (en Barrancabermeja ~6%).
-  alumbradoPct        Float          @default(6)
+  // Alumbrado público: valor TOTAL del extracto; el cliente paga un % (así se reparte
+  // entre varios medidores). El valor del recibo ya viene siendo ~6% de la energía.
+  alumbradoTotalCents Int            @default(0)
+  alumbradoPct        Float          @default(50) // % del alumbrado total que paga el cliente
   // Aseo: cargo fijo del extracto; el cliente paga un % (opcional).
   aseoTotalCents      Int            @default(0)
   aseoPct             Float          @default(0)
