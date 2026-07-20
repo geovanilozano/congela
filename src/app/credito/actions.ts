@@ -100,6 +100,82 @@ export async function crearCredito(formData: FormData) {
 }
 
 /**
+ * Edita un crédito. Como al cambiar monto/tasa/cuotas hay que regenerar toda la tabla de
+ * amortización, solo se permite si el crédito AÚN NO tiene abonos (si no, se perdería el
+ * avance de pago: en ese caso hay que eliminarlo y crearlo de nuevo).
+ */
+export async function actualizarCredito(formData: FormData) {
+  await exigirDueno();
+  const id = Number(formData.get("id"));
+  if (!id) redirect("/credito");
+
+  const entidad = String(formData.get("entidad") || "");
+  const montoPesos = Number(formData.get("montoPesos")) || 0;
+  const tasaMensualPct = Number(formData.get("tasaMensualPct")) || 0;
+  const numCuotas = Math.max(1, Math.floor(Number(formData.get("numCuotas")) || 1));
+  const fechaInicio = fechaLocalODefecto(formData.get("fechaInicio"));
+  if (montoPesos <= 0) redirect(`/credito?editar=${id}&error=monto`);
+
+  // Con abonos registrados no se puede regenerar la tabla sin perder el avance.
+  const abonos = await db.cuotaAmortizacion.aggregate({ where: { creditoId: id }, _sum: { abonadoCents: true } });
+  if ((abonos._sum.abonadoCents ?? 0) > 0) redirect("/credito?error=editarConAbonos");
+
+  const montoCents = toCents(montoPesos);
+  const tasaMensual = tasaMensualPct / 100;
+  const tabla = generarAmortizacion({ montoCents, tasaMensual, numCuotas });
+
+  await db.$transaction(async (tx) => {
+    // Se reemplaza la tabla completa: se borran las cuotas viejas y se crean las nuevas.
+    await tx.cuotaAmortizacion.deleteMany({ where: { creditoId: id } });
+    await tx.credito.update({
+      where: { id },
+      data: {
+        entidad,
+        montoCents,
+        tasaMensual,
+        numCuotas,
+        fechaInicio,
+        estado: "activo",
+        cuotas: {
+          create: tabla.map((c) => ({
+            numero: c.numero,
+            fechaVencimiento: sumarMeses(fechaInicio, c.numero),
+            cuotaCents: c.cuotaCents,
+            capitalCents: c.capitalCents,
+            interesCents: c.interesCents,
+            saldoCents: c.saldoCents,
+          })),
+        },
+      },
+    });
+    await recalcularFondoCredito(tx);
+  });
+
+  revalidatePath("/credito");
+  revalidatePath("/fondos");
+  revalidatePath("/");
+  redirect("/credito?ok=editado");
+}
+
+/**
+ * Elimina un crédito por completo (sus cuotas y pagos se borran en cascada) y reajusta la
+ * reserva del fondo "Crédito". Sirve para quitar un crédito mal registrado que, si no, se
+ * quedaría para siempre con su cuota vencida apareciendo en las alertas del tablero.
+ */
+export async function eliminarCredito(formData: FormData) {
+  await exigirDueno();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await db.$transaction(async (tx) => {
+    await tx.credito.delete({ where: { id } }); // cascada: cuotas y pagos
+    await recalcularFondoCredito(tx);
+  });
+  revalidatePath("/credito");
+  revalidatePath("/fondos");
+  revalidatePath("/");
+}
+
+/**
  * Registra un abono al crédito. El monto puede ser una cuota completa, menos (abono
  * parcial) o más (adelanta varias cuotas). Se reparte de la cuota más vieja a la más
  * nueva. Si con el abono quedan todas las cuotas pagadas, el crédito se marca PAGADO y

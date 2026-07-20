@@ -5,6 +5,7 @@ import { ensureFondos } from "@/lib/seed";
 import { cerrarCaja, anularUltimoCierre } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { FormConfirm } from "@/components/FormConfirm";
 
 export const dynamic = "force-dynamic";
 
@@ -90,14 +91,18 @@ export default async function CajaPage({
           </div>
         </div>
 
-        <form action={cerrarCaja} className="mt-5">
+        <FormConfirm
+          action={cerrarCaja}
+          mensaje={`¿Cerrar la caja y repartir ${formatMoney(totalPendiente)} en los fondos? Si algo queda mal, puedes anular el cierre después.`}
+          className="mt-5"
+        >
           <BotonGuardar
             disabled={totalPendiente === 0}
             className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             Cerrar caja y repartir el dinero
           </BotonGuardar>
-        </form>
+        </FormConfirm>
       </div>
 
       <div>

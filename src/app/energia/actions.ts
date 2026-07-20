@@ -71,3 +71,24 @@ export async function registrarConsumo(formData: FormData) {
   revalidatePath("/energia");
   revalidatePath("/");
 }
+
+// Borrado de registros mal digitados: un kWh equivocado descuadra el ahorro solar y los
+// KPIs del tablero, así que hay que poder quitarlo. Para corregir un valor, se elimina y
+// se vuelve a registrar.
+export async function eliminarGeneracion(formData: FormData) {
+  await exigirDueno();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await db.energiaGeneracion.delete({ where: { id } });
+  revalidatePath("/energia");
+  revalidatePath("/");
+}
+
+export async function eliminarConsumo(formData: FormData) {
+  await exigirDueno();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await db.medidorLectura.delete({ where: { id } });
+  revalidatePath("/energia");
+  revalidatePath("/");
+}

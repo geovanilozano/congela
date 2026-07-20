@@ -10,8 +10,11 @@ import {
   registrarConsumo,
   guardarCredencialesGrowatt,
   sincronizarGrowattAccion,
+  eliminarGeneracion,
+  eliminarConsumo,
 } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { BotonEliminar } from "@/components/BotonEliminar";
 
 export const dynamic = "force-dynamic";
 
@@ -194,8 +197,8 @@ export default async function EnergiaPage() {
 
       {/* Historial */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Historial titulo="Generación de paneles" datos={generaciones} unidad="kWh" color="text-amber-600" fmtFecha={fmtFecha} />
-        <Historial titulo="Consumo de la empresa" datos={consumos} unidad="kWh" color="text-sky-700" fmtFecha={fmtFecha} />
+        <Historial titulo="Generación de paneles" datos={generaciones} unidad="kWh" color="text-amber-600" fmtFecha={fmtFecha} accionEliminar={eliminarGeneracion} />
+        <Historial titulo="Consumo de la empresa" datos={consumos} unidad="kWh" color="text-sky-700" fmtFecha={fmtFecha} accionEliminar={eliminarConsumo} />
       </div>
     </div>
   );
@@ -217,12 +220,14 @@ function Historial({
   unidad,
   color,
   fmtFecha,
+  accionEliminar,
 }: {
   titulo: string;
   datos: { id: number; fecha: Date; kwh: number }[];
   unidad: string;
   color: string;
   fmtFecha: (d: Date) => string;
+  accionEliminar: (fd: FormData) => void | Promise<void>;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -232,9 +237,16 @@ function Historial({
       ) : (
         <ul className="divide-y divide-slate-100 text-sm">
           {datos.slice(0, 8).map((d) => (
-            <li key={d.id} className="flex items-center justify-between py-1.5">
+            <li key={d.id} className="flex items-center justify-between gap-3 py-1.5">
               <span className="text-slate-500">{fmtFecha(d.fecha)}</span>
-              <span className={`font-medium ${color}`}>{d.kwh.toFixed(1)} {unidad}</span>
+              <div className="flex items-center gap-3">
+                <span className={`font-medium ${color}`}>{d.kwh.toFixed(1)} {unidad}</span>
+                <BotonEliminar
+                  action={accionEliminar}
+                  id={d.id}
+                  mensaje={`¿Eliminar el registro de ${d.kwh.toFixed(1)} ${unidad} del ${fmtFecha(d.fecha)}?`}
+                />
+              </div>
             </li>
           ))}
         </ul>

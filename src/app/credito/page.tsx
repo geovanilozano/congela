@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { estadoCuota } from "@/lib/finance/cuotas";
-import { crearCredito, registrarPago } from "./actions";
+import { crearCredito, actualizarCredito, eliminarCredito, registrarPago } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { BotonEliminar } from "@/components/BotonEliminar";
 import { InputDinero } from "@/components/InputDinero";
+import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +17,17 @@ function fmtFecha(d: Date) {
 export default async function CreditoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; editar?: string; ok?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, editar, ok } = await searchParams;
+  const editarId = editar ? Number(editar) : null;
   const creditos = await db.credito.findMany({
     include: { cuotas: { orderBy: { numero: "asc" } } },
     orderBy: { id: "desc" },
   });
+
+  // Crédito en edición (si se pidió y no tiene abonos: editar regenera la tabla de pagos).
+  const enEdicion = editarId ? creditos.find((c) => c.id === editarId) ?? null : null;
 
   // ---- Resumen global del crédito ----
   // Se agregan todas las cuotas de todos los créditos registrados para dar una
@@ -59,6 +66,17 @@ export default async function CreditoPage({
       {error === "abono" && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <strong>No se registró el abono.</strong> Escribe un monto mayor que $0.
+        </div>
+      )}
+      {error === "editarConAbonos" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>No se puede editar un crédito que ya tiene abonos.</strong> Para no perder el
+          avance de pago, elimínalo y créalo de nuevo con los datos correctos.
+        </div>
+      )}
+      {ok === "editado" && (
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+          ✓ Crédito actualizado. Se regeneró la tabla de pagos.
         </div>
       )}
 
@@ -176,34 +194,48 @@ export default async function CreditoPage({
         </div>
       )}
 
-      {/* Formulario nuevo crédito */}
+      {/* Formulario crear / editar crédito */}
       <form
-        action={crearCredito}
+        key={enEdicion?.id ?? "nuevo"}
+        action={enEdicion ? actualizarCredito : crearCredito}
         className="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
       >
+        {enEdicion && <input type="hidden" name="id" value={enEdicion.id} />}
+        {enEdicion && (
+          <p className="text-sm font-medium text-sky-700 sm:col-span-2 lg:col-span-5">
+            ✏️ Editando el crédito «{enEdicion.entidad || "Crédito"}». Al guardar se regenera la tabla de pagos.
+          </p>
+        )}
         <label className="text-sm lg:col-span-1">
           <span className="text-slate-500">Entidad / prestamista</span>
-          <input name="entidad" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="entidad" defaultValue={enEdicion?.entidad ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Monto financiado ($)</span>
-          <InputDinero name="montoPesos" required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="montoPesos" required defaultValue={enEdicion ? enEdicion.montoCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Tasa mensual (%)</span>
-          <input name="tasaMensualPct" type="number" min="0" step="0.01" defaultValue={2} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="tasaMensualPct" type="number" min="0" step="0.01" defaultValue={enEdicion ? Number((enEdicion.tasaMensual * 100).toFixed(2)) : 2} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500"># de cuotas</span>
-          <input name="numCuotas" type="number" min="1" defaultValue={24} required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="numCuotas" type="number" min="1" defaultValue={enEdicion?.numCuotas ?? 24} required className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Fecha de inicio</span>
-          <input name="fechaInicio" type="date" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="fechaInicio" type="date" defaultValue={enEdicion ? fechaParaInput(enEdicion.fechaInicio) : ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
-        <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 sm:col-span-2 lg:col-span-5">
-          Crear crédito y generar tabla de pagos
-        </BotonGuardar>
+        <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
+          <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {enEdicion ? "Guardar cambios y regenerar tabla" : "Crear crédito y generar tabla de pagos"}
+          </BotonGuardar>
+          {enEdicion && (
+            <Link href="/credito" className="text-sm text-slate-500 hover:underline">
+              Cancelar
+            </Link>
+          )}
+        </div>
       </form>
 
       {creditos.length === 0 && (
@@ -232,15 +264,28 @@ export default async function CreditoPage({
                   {(c.tasaMensual * 100).toFixed(2)}% mensual · {c.numCuotas} cuotas
                 </p>
               </div>
-              {c.estado === "pagado" ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
-                  ✅ Crédito PAGADO
-                </span>
-              ) : (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
-                  Activo
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {c.estado === "pagado" ? (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    ✅ Crédito PAGADO
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
+                    Activo
+                  </span>
+                )}
+                {/* Editar solo si aún no tiene abonos (editar regenera la tabla de pagos). */}
+                {totalPagado === 0 && (
+                  <Link href={`/credito?editar=${c.id}`} className="text-xs text-sky-600 hover:underline">
+                    Editar
+                  </Link>
+                )}
+                <BotonEliminar
+                  action={eliminarCredito}
+                  id={c.id}
+                  mensaje={`¿Eliminar el crédito «${c.entidad || "Crédito"}» y toda su tabla de pagos? Esta acción no se puede deshacer.`}
+                />
+              </div>
             </div>
 
             {/* Indicadores */}
