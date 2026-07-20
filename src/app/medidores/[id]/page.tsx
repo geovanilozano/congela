@@ -72,6 +72,8 @@ export default async function MedidorDetallePage({
           subsistenciaDefault={ultima ? ultima.subsistenciaKwh : 173}
           alumbradoTotalDefault={ultima ? ultima.alumbradoTotalCents / 100 : null}
           alumbradoPctDefault={ultima ? ultima.alumbradoPct : 50}
+          aseoTotalDefault={ultima ? ultima.aseoTotalCents / 100 : null}
+          aseoPctDefault={ultima ? ultima.aseoPct : 50}
           consumoTotalDefault={ultima ? ultima.consumoTotalKwh : null}
         />
       </section>

@@ -20,6 +20,8 @@ export function FormLiquidacion({
   subsistenciaDefault,
   alumbradoTotalDefault,
   alumbradoPctDefault,
+  aseoTotalDefault,
+  aseoPctDefault,
   consumoTotalDefault,
 }: {
   medidorId: number;
@@ -32,6 +34,8 @@ export function FormLiquidacion({
   subsistenciaDefault: number;
   alumbradoTotalDefault: number | null;
   alumbradoPctDefault: number;
+  aseoTotalDefault: number | null;
+  aseoPctDefault: number;
   consumoTotalDefault: number | null;
 }) {
   const [f, setF] = useState({
@@ -43,8 +47,8 @@ export function FormLiquidacion({
     consumoTotalKwh: consumoTotalDefault ? String(consumoTotalDefault) : "",
     alumbradoTotalPesos: alumbradoTotalDefault ? String(alumbradoTotalDefault) : "",
     alumbradoPct: String(alumbradoPctDefault),
-    aseoTotalPesos: "",
-    aseoPct: "",
+    aseoTotalPesos: aseoTotalDefault ? String(aseoTotalDefault) : "",
+    aseoPct: String(aseoPctDefault),
   });
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -147,11 +151,11 @@ export function FormLiquidacion({
             </label>
             <label className="text-sm">
               <span className="text-slate-500">Aseo total del extracto ($) — opcional</span>
-              <input {...numProps} name="aseoTotalPesos" value={f.aseoTotalPesos} onChange={set("aseoTotalPesos")} placeholder="0" className={inputCls} />
+              <input {...numProps} name="aseoTotalPesos" value={f.aseoTotalPesos} onChange={set("aseoTotalPesos")} placeholder="35921" className={inputCls} />
             </label>
             <label className="text-sm">
               <span className="text-slate-500">% de aseo que paga el cliente</span>
-              <input {...numProps} name="aseoPct" value={f.aseoPct} onChange={set("aseoPct")} placeholder="0" className={inputCls} />
+              <input {...numProps} name="aseoPct" value={f.aseoPct} onChange={set("aseoPct")} placeholder="50" className={inputCls} />
             </label>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
