@@ -25,6 +25,7 @@ export interface EntradaLiquidacion {
 export interface ResultadoLiquidacion {
   consumoKwh: number;
   energiaCents: number;
+  kwhSubsidiado: number; // cuántos kWh alcanzaron subsidio (tope = subsistencia)
   subsidioCents: number;
   alumbradoClienteCents: number;
   aseoClienteCents: number;
@@ -57,5 +58,5 @@ export function liquidarMedidor(e: EntradaLiquidacion): ResultadoLiquidacion {
   // El total no baja de 0 (un subsidio mayor que el consumo no genera un cobro negativo).
   const totalCents = Math.max(0, energiaCents - subsidioCents + alumbradoClienteCents + aseoClienteCents);
 
-  return { consumoKwh, energiaCents, subsidioCents, alumbradoClienteCents, aseoClienteCents, totalCents };
+  return { consumoKwh, energiaCents, kwhSubsidiado, subsidioCents, alumbradoClienteCents, aseoClienteCents, totalCents };
 }

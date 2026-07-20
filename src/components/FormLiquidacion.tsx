@@ -146,7 +146,15 @@ export function FormLiquidacion({
           <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Lo que se le cobra</div>
           <div className="mt-3 space-y-1.5 text-sm">
             <Fila etiqueta={`Consumo: ${r.consumoKwh} kWh`} valor={formatMoney(r.energiaCents)} />
-            {r.subsidioCents > 0 && <Fila etiqueta="Descuento (subsidio)" valor={`− ${formatMoney(r.subsidioCents)}`} rojo />}
+            {r.subsidioCents > 0 && (
+              <>
+                <Fila etiqueta="Descuento (subsidio)" valor={`− ${formatMoney(r.subsidioCents)}`} rojo />
+                <p className="-mt-1 pl-1 text-[11px] text-slate-400">
+                  {num(f.subsidioPct)}% sobre {r.kwhSubsidiado} de {r.consumoKwh} kWh
+                  {r.energiaCents > 0 && ` · ${Math.round((r.subsidioCents / r.energiaCents) * 100)}% real`}
+                </p>
+              </>
+            )}
             {r.alumbradoClienteCents > 0 && <Fila etiqueta="Alumbrado público" valor={`+ ${formatMoney(r.alumbradoClienteCents)}`} />}
             {r.aseoClienteCents > 0 && <Fila etiqueta="Aseo" valor={`+ ${formatMoney(r.aseoClienteCents)}`} />}
           </div>
