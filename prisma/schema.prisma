@@ -418,14 +418,17 @@ model LiquidacionMedidor {
   medidor             MedidorCliente @relation(fields: [medidorId], references: [id], onDelete: Cascade)
   fechaAnterior       DateTime
   fechaActual         DateTime
-  lecturaAnterior     Int            // kWh
-  lecturaActual       Int            // kWh
+  lecturaAnterior     Float          // kWh (el medidor puede marcar decimales)
+  lecturaActual       Float          // kWh
   factor              Int            @default(1) // se copia del medidor: la liquidación es inmutable
   fotoUrl             String?
   tarifaCuCents       Int            // centavos de peso por kWh (ej. 824.03 $/kWh -> 82403)
-  subsidioCents       Int            @default(0) // descuento del extracto
-  alumbradoTotalCents Int            @default(0)
-  alumbradoPct        Float          @default(0) // % que paga el cliente (0-100)
+  // Subsidio: % del extracto aplicado SOLO al consumo de subsistencia (así lo cobra ESSA).
+  subsidioPct         Float          @default(0) // % del extracto (ej. 47, 50)
+  subsistenciaKwh     Int            @default(173) // tope de kWh subsidiados (Barrancabermeja ~173)
+  // Alumbrado público: % del valor de la energía (en Barrancabermeja ~6%).
+  alumbradoPct        Float          @default(6)
+  // Aseo: cargo fijo del extracto; el cliente paga un % (opcional).
   aseoTotalCents      Int            @default(0)
   aseoPct             Float          @default(0)
   pagada              Boolean        @default(false)

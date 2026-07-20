@@ -68,6 +68,9 @@ export default async function MedidorDetallePage({
           tarifaPesosDefault={ultima ? ultima.tarifaCuCents / 100 : null}
           lecturaAnteriorDefault={ultima ? ultima.lecturaActual : null}
           fechaAnteriorDefault={ultima ? fechaParaInput(ultima.fechaActual) : ""}
+          subsidioPctDefault={ultima ? ultima.subsidioPct : 50}
+          subsistenciaDefault={ultima ? ultima.subsistenciaKwh : 173}
+          alumbradoPctDefault={ultima ? ultima.alumbradoPct : 6}
         />
       </section>
 

@@ -108,14 +108,14 @@ export default async function FacturaMedidorPage({ params }: { params: Promise<{
             {r.subsidioCents > 0 && (
               <tr className="border-b border-slate-100">
                 <td className="py-2 text-slate-700">Descuento (subsidio)</td>
-                <td className="py-2 text-right text-slate-500">según extracto</td>
+                <td className="py-2 text-right text-slate-500">{liq.subsidioPct}% hasta {liq.subsistenciaKwh} kWh</td>
                 <td className="py-2 text-right font-medium text-red-600">− {formatMoney(r.subsidioCents)}</td>
               </tr>
             )}
             {r.alumbradoClienteCents > 0 && (
               <tr className="border-b border-slate-100">
                 <td className="py-2 text-slate-700">Alumbrado público</td>
-                <td className="py-2 text-right text-slate-500">{liq.alumbradoPct}% de {formatMoney(liq.alumbradoTotalCents)}</td>
+                <td className="py-2 text-right text-slate-500">{liq.alumbradoPct}% de la energía</td>
                 <td className="py-2 text-right font-medium text-slate-800">{formatMoney(r.alumbradoClienteCents)}</td>
               </tr>
             )}

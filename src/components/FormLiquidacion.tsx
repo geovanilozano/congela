@@ -6,8 +6,9 @@ import { liquidarMedidor } from "@/lib/finance/medidor";
 import { BotonGuardar } from "@/components/BotonGuardar";
 
 // Formulario para liquidar un periodo del medidor de un cliente. Muestra EN VIVO cuánto
-// se le va a cobrar mientras se escriben las lecturas y la tarifa del extracto, y al
-// guardar manda todo al server action.
+// se le va a cobrar mientras se escriben las lecturas y los datos del extracto, y al
+// guardar manda todo al server action. El subsidio y el alumbrado se calculan solos:
+// el usuario solo pone los % del extracto (o deja los que trae por defecto).
 export function FormLiquidacion({
   medidorId,
   factor,
@@ -15,6 +16,9 @@ export function FormLiquidacion({
   tarifaPesosDefault,
   lecturaAnteriorDefault,
   fechaAnteriorDefault,
+  subsidioPctDefault,
+  subsistenciaDefault,
+  alumbradoPctDefault,
 }: {
   medidorId: number;
   factor: number;
@@ -22,14 +26,17 @@ export function FormLiquidacion({
   tarifaPesosDefault: number | null;
   lecturaAnteriorDefault: number | null;
   fechaAnteriorDefault: string;
+  subsidioPctDefault: number;
+  subsistenciaDefault: number;
+  alumbradoPctDefault: number;
 }) {
   const [f, setF] = useState({
     lecturaAnterior: lecturaAnteriorDefault != null ? String(lecturaAnteriorDefault) : "",
     lecturaActual: "",
     tarifaPesos: tarifaPesosDefault != null ? String(tarifaPesosDefault) : "",
-    subsidioPesos: "",
-    alumbradoTotalPesos: "",
-    alumbradoPct: "",
+    subsidioPct: String(subsidioPctDefault),
+    subsistenciaKwh: String(subsistenciaDefault),
+    alumbradoPct: String(alumbradoPctDefault),
     aseoTotalPesos: "",
     aseoPct: "",
   });
@@ -47,8 +54,8 @@ export function FormLiquidacion({
     lecturaActual: num(f.lecturaActual),
     factor,
     tarifaCuCents: Math.round(num(f.tarifaPesos) * 100),
-    subsidioCents: Math.round(num(f.subsidioPesos) * 100),
-    alumbradoTotalCents: Math.round(num(f.alumbradoTotalPesos) * 100),
+    subsidioPct: num(f.subsidioPct),
+    subsistenciaKwh: num(f.subsistenciaKwh),
     alumbradoPct: num(f.alumbradoPct),
     aseoTotalCents: Math.round(num(f.aseoTotalPesos) * 100),
     aseoPct: num(f.aseoPct),
@@ -87,34 +94,37 @@ export function FormLiquidacion({
           </label>
         </div>
 
-        {/* Tarifa + subsidio */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="text-slate-500">Tarifa CU del extracto ($/kWh)</span>
-            <input {...numProps} name="tarifaPesos" value={f.tarifaPesos} onChange={set("tarifaPesos")} placeholder="824.03" required className={inputCls} />
-          </label>
-          <label className="text-sm">
-            <span className="text-slate-500">Descuento / subsidio ($)</span>
-            <input {...numProps} name="subsidioPesos" value={f.subsidioPesos} onChange={set("subsidioPesos")} placeholder="0" className={inputCls} />
-          </label>
+        {/* Datos del extracto */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Datos del extracto</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="text-slate-500">Tarifa CU ($/kWh)</span>
+              <input {...numProps} name="tarifaPesos" value={f.tarifaPesos} onChange={set("tarifaPesos")} placeholder="824.03" required className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">Subsidio del extracto (%)</span>
+              <input {...numProps} name="subsidioPct" value={f.subsidioPct} onChange={set("subsidioPct")} placeholder="50" className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">Alumbrado público (% de la energía)</span>
+              <input {...numProps} name="alumbradoPct" value={f.alumbradoPct} onChange={set("alumbradoPct")} placeholder="6" className={inputCls} />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-500">Consumo de subsistencia (kWh)</span>
+              <input {...numProps} name="subsistenciaKwh" value={f.subsistenciaKwh} onChange={set("subsistenciaKwh")} placeholder="173" className={inputCls} />
+            </label>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">
+            El subsidio solo aplica hasta el consumo de subsistencia (por eso a consumos altos no se
+            descuenta todo). En Barrancabermeja el alumbrado es ~6% y la subsistencia ~173 kWh.
+          </p>
         </div>
 
-        {/* Alumbrado */}
+        {/* Aseo (opcional) */}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
-            <span className="text-slate-500">Alumbrado público total ($)</span>
-            <input {...numProps} name="alumbradoTotalPesos" value={f.alumbradoTotalPesos} onChange={set("alumbradoTotalPesos")} placeholder="0" className={inputCls} />
-          </label>
-          <label className="text-sm">
-            <span className="text-slate-500">% que paga el cliente</span>
-            <input {...numProps} name="alumbradoPct" value={f.alumbradoPct} onChange={set("alumbradoPct")} placeholder="50" className={inputCls} />
-          </label>
-        </div>
-
-        {/* Aseo */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="text-slate-500">Aseo total ($)</span>
+            <span className="text-slate-500">Aseo total del extracto ($) — opcional</span>
             <input {...numProps} name="aseoTotalPesos" value={f.aseoTotalPesos} onChange={set("aseoTotalPesos")} placeholder="0" className={inputCls} />
           </label>
           <label className="text-sm">

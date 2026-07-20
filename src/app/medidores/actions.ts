@@ -88,15 +88,14 @@ export async function crearLiquidacion(formData: FormData) {
   const medidor = await db.medidorCliente.findUnique({ where: { id: medidorId }, select: { factor: true } });
   if (!medidor) return;
 
-  const lecturaAnterior = Math.round(Number(formData.get("lecturaAnterior")) || 0);
-  const lecturaActual = Math.round(Number(formData.get("lecturaActual")) || 0);
+  // Las lecturas pueden traer decimales (el medidor las marca); el consumo se redondea
+  // a kWh enteros dentro del calculador, no aquí.
+  const lecturaAnterior = Number(formData.get("lecturaAnterior")) || 0;
+  const lecturaActual = Number(formData.get("lecturaActual")) || 0;
   const tarifaCuCents = toCents(Number(formData.get("tarifaPesos")) || 0);
   if (tarifaCuCents <= 0) redirect(`/medidores/${medidorId}?error=tarifa`);
 
   const fotoUrl = await guardarFoto(formData.get("foto"));
-
-  const alumbradoTotalCents = toCents(Number(formData.get("alumbradoTotalPesos")) || 0);
-  const aseoTotalCents = toCents(Number(formData.get("aseoTotalPesos")) || 0);
 
   await db.liquidacionMedidor.create({
     data: {
@@ -108,10 +107,10 @@ export async function crearLiquidacion(formData: FormData) {
       factor: medidor.factor,
       fotoUrl,
       tarifaCuCents,
-      subsidioCents: toCents(Number(formData.get("subsidioPesos")) || 0),
-      alumbradoTotalCents,
-      alumbradoPct: numeroOpcional(formData.get("alumbradoPct")) ?? 0,
-      aseoTotalCents,
+      subsidioPct: numeroOpcional(formData.get("subsidioPct")) ?? 0,
+      subsistenciaKwh: Math.max(0, Math.round(Number(formData.get("subsistenciaKwh")) || 173)),
+      alumbradoPct: numeroOpcional(formData.get("alumbradoPct")) ?? 6,
+      aseoTotalCents: toCents(Number(formData.get("aseoTotalPesos")) || 0),
       aseoPct: numeroOpcional(formData.get("aseoPct")) ?? 0,
     },
   });

@@ -1,88 +1,77 @@
 import { describe, it, expect } from "vitest";
 import { liquidarMedidor } from "../src/lib/finance/medidor";
 
+// Parámetros por defecto de una liquidación (se sobreescriben en cada caso).
+const base = {
+  factor: 1,
+  subsidioPct: 0,
+  subsistenciaKwh: 173,
+  alumbradoPct: 6,
+  aseoTotalCents: 0,
+  aseoPct: 0,
+};
+
 describe("liquidarMedidor", () => {
-  it("calcula el consumo y la energía como la factura de ESSA (510 kWh, CU 824,03)", () => {
+  it("factura ESSA de 49 kWh (todo dentro de subsistencia, subsidio 50%, CU 846,46)", () => {
     const r = liquidarMedidor({
-      lecturaAnterior: 27985,
-      lecturaActual: 28495,
-      factor: 1,
-      tarifaCuCents: 82403, // 824,03 $/kWh
-      subsidioCents: 6_784_700, // -$67.847
-      alumbradoTotalCents: 2_521_500, // $25.215
-      alumbradoPct: 50,
-      aseoTotalCents: 0,
-      aseoPct: 0,
+      ...base,
+      lecturaAnterior: 19943,
+      lecturaActual: 19992,
+      tarifaCuCents: 84646, // 846,46 $/kWh
+      subsidioPct: 50,
+      alumbradoPct: 6,
     });
-    expect(r.consumoKwh).toBe(510);
-    expect(r.energiaCents).toBe(510 * 82403); // 42.025.530 = $420.255,30
-    expect(r.alumbradoClienteCents).toBe(1_260_750); // 50% de $25.215
-    expect(r.aseoClienteCents).toBe(0);
-    expect(r.totalCents).toBe(42_025_530 - 6_784_700 + 1_260_750); // 36.501.580 = $365.015,80
+    expect(r.consumoKwh).toBe(49);
+    expect(r.energiaCents).toBe(49 * 84646); // 4.147.654 ≈ $41.477 (factura)
+    // 49 kWh < 173 -> se subsidia todo: 50% de la energía. Factura: $20.786 (nuestra base ≈ $20.738).
+    expect(r.subsidioCents).toBe(Math.round(49 * 84646 * 0.5));
+    // Alumbrado 6% de la energía = $2.489 en la factura.
+    expect(r.alumbradoClienteCents).toBe(Math.round(49 * 84646 * 0.06));
   });
 
-  it("aplica el porcentaje de alumbrado y de aseo por separado", () => {
+  it("factura ESSA de 510 kWh (subsidio solo sobre 173 kWh, 47%, CU 824,03)", () => {
     const r = liquidarMedidor({
-      lecturaAnterior: 0,
-      lecturaActual: 100,
-      factor: 1,
-      tarifaCuCents: 100_000, // $1.000/kWh
-      subsidioCents: 0,
-      alumbradoTotalCents: 1_000_000, // $10.000
-      alumbradoPct: 50,
-      aseoTotalCents: 2_000_000, // $20.000
-      aseoPct: 25,
+      ...base,
+      lecturaAnterior: 27985,
+      lecturaActual: 28495,
+      tarifaCuCents: 82403,
+      subsidioPct: 47,
+      alumbradoPct: 6,
     });
-    expect(r.energiaCents).toBe(10_000_000);
-    expect(r.alumbradoClienteCents).toBe(500_000);
-    expect(r.aseoClienteCents).toBe(500_000);
-    expect(r.totalCents).toBe(11_000_000);
+    expect(r.consumoKwh).toBe(510);
+    expect(r.energiaCents).toBe(510 * 82403); // $420.255
+    // Solo se subsidian 173 kWh (el tope), no los 510.
+    expect(r.subsidioCents).toBe(Math.round(173 * 82403 * 0.47));
+    // Alumbrado 6% = $25.215 en la factura.
+    expect(r.alumbradoClienteCents).toBe(2_521_532); // ≈ $25.215
+  });
+
+  it("el subsidio se limita al consumo de subsistencia", () => {
+    const bajo = liquidarMedidor({ ...base, lecturaAnterior: 0, lecturaActual: 100, tarifaCuCents: 100_000, subsidioPct: 50, subsistenciaKwh: 173 });
+    expect(bajo.subsidioCents).toBe(Math.round(100 * 100_000 * 0.5)); // 100 < 173 -> subsidia 100
+
+    const alto = liquidarMedidor({ ...base, lecturaAnterior: 0, lecturaActual: 300, tarifaCuCents: 100_000, subsidioPct: 50, subsistenciaKwh: 173 });
+    expect(alto.subsidioCents).toBe(Math.round(173 * 100_000 * 0.5)); // 300 > 173 -> subsidia solo 173
   });
 
   it("respeta el factor de multiplicación del medidor", () => {
-    const r = liquidarMedidor({
-      lecturaAnterior: 100,
-      lecturaActual: 150,
-      factor: 10,
-      tarifaCuCents: 80_000,
-      subsidioCents: 0,
-      alumbradoTotalCents: 0,
-      alumbradoPct: 0,
-      aseoTotalCents: 0,
-      aseoPct: 0,
-    });
+    const r = liquidarMedidor({ ...base, lecturaAnterior: 100, lecturaActual: 150, factor: 10, tarifaCuCents: 80_000 });
     expect(r.consumoKwh).toBe(500); // (150-100) × 10
-    expect(r.energiaCents).toBe(500 * 80_000);
+  });
+
+  it("suma el aseo como % de un cargo fijo", () => {
+    const r = liquidarMedidor({ ...base, lecturaAnterior: 0, lecturaActual: 10, tarifaCuCents: 100_000, aseoTotalCents: 3_000_000, aseoPct: 50 });
+    expect(r.aseoClienteCents).toBe(1_500_000);
   });
 
   it("una lectura menor que la anterior no genera consumo ni cobro negativo", () => {
-    const r = liquidarMedidor({
-      lecturaAnterior: 100,
-      lecturaActual: 50,
-      factor: 1,
-      tarifaCuCents: 80_000,
-      subsidioCents: 0,
-      alumbradoTotalCents: 0,
-      alumbradoPct: 0,
-      aseoTotalCents: 0,
-      aseoPct: 0,
-    });
+    const r = liquidarMedidor({ ...base, lecturaAnterior: 100, lecturaActual: 50, tarifaCuCents: 80_000, subsidioPct: 50 });
     expect(r.consumoKwh).toBe(0);
     expect(r.totalCents).toBe(0);
   });
 
-  it("un subsidio mayor que el consumo no genera un total negativo", () => {
-    const r = liquidarMedidor({
-      lecturaAnterior: 0,
-      lecturaActual: 10,
-      factor: 1,
-      tarifaCuCents: 80_000, // energía = $8.000
-      subsidioCents: 9_999_999, // descuento gigante
-      alumbradoTotalCents: 0,
-      alumbradoPct: 0,
-      aseoTotalCents: 0,
-      aseoPct: 0,
-    });
-    expect(r.totalCents).toBe(0);
+  it("un subsidio del 100% no genera un total negativo", () => {
+    const r = liquidarMedidor({ ...base, lecturaAnterior: 0, lecturaActual: 10, tarifaCuCents: 80_000, subsidioPct: 100, alumbradoPct: 0 });
+    expect(r.totalCents).toBe(0); // energía $8.000 − subsidio $8.000 = 0
   });
 });
