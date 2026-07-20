@@ -1,26 +1,10 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { repartirDetallado, ReglaFondo } from "@/lib/finance/fondos";
+import { repartirDetallado, mapearReglas } from "@/lib/finance/fondos";
 import { exigirRol } from "@/lib/auth/guard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
-/** Pasa las reglas de los fondos al formato que espera el motor de reparto. */
-function aReglas(
-  fondos: { nombre: string; regla: { tipo: string; valorCents: number | null; valor: number | null; prioridad: number; activo: boolean } | null }[],
-): ReglaFondo[] {
-  return fondos
-    .filter((f) => f.regla)
-    .map((f) => ({
-      fondo: f.nombre,
-      tipo: f.regla!.tipo as ReglaFondo["tipo"],
-      valorCents: f.regla!.valorCents ?? undefined,
-      valor: f.regla!.valor ?? undefined,
-      prioridad: f.regla!.prioridad,
-      activo: f.regla!.activo,
-    }));
-}
 
 /**
  * Cierra la caja del día: suma las ventas pendientes y reparte el total en los fondos.
@@ -39,7 +23,7 @@ export async function cerrarCaja() {
     const totalCents = ventas.reduce((a, v) => a + v.totalCents, 0);
 
     const fondos = await tx.fondo.findMany({ include: { regla: true } });
-    const { porFondo, sinAsignarCents } = repartirDetallado(totalCents, aReglas(fondos));
+    const { porFondo, sinAsignarCents } = repartirDetallado(totalCents, mapearReglas(fondos));
 
     // Si no hay ningún fondo "resto" (Utilidad) activo, parte del dinero se quedaría
     // sin dueño. Antes desaparecía en silencio; ahora no se cierra la caja.

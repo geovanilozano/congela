@@ -3,6 +3,7 @@ import { formatMoney } from "@/lib/finance/money";
 import { registrarRecibo, eliminarRecibo, actualizarRecibo } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas, fechaParaInput } from "@/lib/fechas";
 import { LectorFoto } from "@/components/LectorFoto";
@@ -129,10 +130,8 @@ export default async function ServiciosPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Valor del recibo ($)</span>
-          <input
+          <InputDinero
             name="valorPesos"
-            type="number"
-            min="0"
             required
             defaultValue={enEdicion ? enEdicion.valorCents / 100 : undefined}
             className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"

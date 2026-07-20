@@ -51,21 +51,24 @@ export async function marcarRealizado(formData: FormData) {
   const m = await db.mantenimiento.findUnique({ where: { id } });
   if (!m || m.estado === "realizado") return;
 
-  await db.mantenimiento.update({
-    where: { id },
-    data: { estado: "realizado", fechaRealizada: new Date() },
+  // Marcar realizado y registrar su gasto van juntos: si el gasto fallara, no queremos
+  // el mantenimiento marcado como hecho pero sin costo contabilizado.
+  await db.$transaction(async (tx) => {
+    await tx.mantenimiento.update({
+      where: { id },
+      data: { estado: "realizado", fechaRealizada: new Date() },
+    });
+    // Si tuvo costo, se registra automáticamente como gasto de mantenimiento.
+    if (m.costoCents > 0) {
+      await tx.compraGasto.create({
+        data: { categoria: "mantenimiento", descripcion: `Mantenimiento: ${m.descripcion}`, valorCents: m.costoCents },
+      });
+    }
   });
 
-  // Si tuvo costo, se registra automáticamente como gasto de mantenimiento.
-  if (m.costoCents > 0) {
-    await db.compraGasto.create({
-      data: { categoria: "mantenimiento", descripcion: `Mantenimiento: ${m.descripcion}`, valorCents: m.costoCents },
-    });
-    revalidatePath("/compras");
-    revalidatePath("/");
-  }
-
   revalidatePath("/mantenimiento");
+  revalidatePath("/compras");
+  revalidatePath("/");
 }
 
 export async function eliminarMantenimiento(formData: FormData) {

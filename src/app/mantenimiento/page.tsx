@@ -4,6 +4,7 @@ import { estadoMantenimiento, EstadoMantenimiento } from "@/lib/mantenimiento";
 import { crearMantenimiento, actualizarMantenimiento, marcarRealizado, eliminarMantenimiento } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas, fechaParaInput } from "@/lib/fechas";
 
@@ -102,7 +103,7 @@ export default async function MantenimientoPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Costo estimado ($)</span>
-          <input name="costoPesos" type="number" min="0" defaultValue={enEdicion ? enEdicion.costoCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="costoPesos" defaultValue={enEdicion ? enEdicion.costoCents / 100 : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Nota</span>

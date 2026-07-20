@@ -6,6 +6,13 @@ import { revalidatePath } from "next/cache";
 import { fechaLocal } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
 
+// Número o null si el campo viene vacío o no es válido (evita meter NaN en un Float).
+function numeroOpcional(v: FormDataEntryValue | null): number | null {
+  if (v === null || String(v).trim() === "") return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
 export async function crearActivo(formData: FormData) {
   await exigirDueno();
   const nombre = String(formData.get("nombre") || "").trim();
@@ -16,35 +23,39 @@ export async function crearActivo(formData: FormData) {
   const formaPago = String(formData.get("formaPago") || "credito");
   const fechaCompra = fechaLocal(String(formData.get("fechaCompra") ?? ""));
 
-  const activo = await db.activo.create({
-    data: {
-      nombre,
-      tipo: String(formData.get("tipo") || "otro"),
-      marca: String(formData.get("marca") || "") || null,
-      capacidad: String(formData.get("capacidad") || "") || null,
-      consumoKwh: formData.get("consumoKwh") ? Number(formData.get("consumoKwh")) : null,
-      costoCents,
-      fechaCompra,
-      garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
-      estado: String(formData.get("estado") || "activo"),
-      ubicacion: String(formData.get("ubicacion") || "") || null,
-    },
-  });
-
-  // Si el equipo tiene costo, se registra automáticamente como inversión.
-  // Así cada equipo se escribe una sola vez y cuenta para la recuperación de la inversión.
-  if (costoCents > 0) {
-    await db.inversion.create({
+  // El activo y su inversión ligada se crean juntos (transacción): si la inversión fallara,
+  // no queremos un equipo sin su registro de inversión (o al revés).
+  await db.$transaction(async (tx) => {
+    const activo = await tx.activo.create({
       data: {
-        descripcion: nombre,
-        proveedor,
-        valorCents: costoCents,
-        formaPago,
-        fecha: fechaCompra ?? new Date(),
-        activoId: activo.id,
+        nombre,
+        tipo: String(formData.get("tipo") || "otro"),
+        marca: String(formData.get("marca") || "") || null,
+        capacidad: String(formData.get("capacidad") || "") || null,
+        consumoKwh: numeroOpcional(formData.get("consumoKwh")),
+        costoCents,
+        fechaCompra,
+        garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
+        estado: String(formData.get("estado") || "activo"),
+        ubicacion: String(formData.get("ubicacion") || "") || null,
       },
     });
-  }
+
+    // Si el equipo tiene costo, se registra automáticamente como inversión.
+    // Así cada equipo se escribe una sola vez y cuenta para la recuperación de la inversión.
+    if (costoCents > 0) {
+      await tx.inversion.create({
+        data: {
+          descripcion: nombre,
+          proveedor,
+          valorCents: costoCents,
+          formaPago,
+          fecha: fechaCompra ?? new Date(),
+          activoId: activo.id,
+        },
+      });
+    }
+  });
 
   revalidatePath("/activos");
   revalidatePath("/inversion");
@@ -64,50 +75,40 @@ export async function actualizarActivo(formData: FormData) {
   const formaPago = String(formData.get("formaPago") || "credito");
   const fechaCompra = fechaLocal(String(formData.get("fechaCompra") ?? ""));
 
-  await db.activo.update({
-    where: { id },
-    data: {
-      nombre,
-      tipo: String(formData.get("tipo") || "otro"),
-      marca: String(formData.get("marca") || "") || null,
-      capacidad: String(formData.get("capacidad") || "") || null,
-      consumoKwh: formData.get("consumoKwh") ? Number(formData.get("consumoKwh")) : null,
-      costoCents,
-      fechaCompra,
-      garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
-      estado: String(formData.get("estado") || "activo"),
-      ubicacion: String(formData.get("ubicacion") || "") || null,
-    },
+  // La actualización del activo y la sincronización de su inversión ligada van juntas.
+  await db.$transaction(async (tx) => {
+    await tx.activo.update({
+      where: { id },
+      data: {
+        nombre,
+        tipo: String(formData.get("tipo") || "otro"),
+        marca: String(formData.get("marca") || "") || null,
+        capacidad: String(formData.get("capacidad") || "") || null,
+        consumoKwh: numeroOpcional(formData.get("consumoKwh")),
+        costoCents,
+        fechaCompra,
+        garantiaHasta: fechaLocal(String(formData.get("garantiaHasta") ?? "")),
+        estado: String(formData.get("estado") || "activo"),
+        ubicacion: String(formData.get("ubicacion") || "") || null,
+      },
+    });
+
+    // Sincroniza la inversión ligada al activo, para no duplicar el registro.
+    const inv = await tx.inversion.findUnique({ where: { activoId: id } });
+
+    if (costoCents > 0 && inv) {
+      await tx.inversion.update({
+        where: { id: inv.id },
+        data: { descripcion: nombre, proveedor, valorCents: costoCents, formaPago, fecha: fechaCompra ?? inv.fecha },
+      });
+    } else if (costoCents > 0 && !inv) {
+      await tx.inversion.create({
+        data: { descripcion: nombre, proveedor, valorCents: costoCents, formaPago, fecha: fechaCompra ?? new Date(), activoId: id },
+      });
+    } else if (costoCents === 0 && inv) {
+      await tx.inversion.delete({ where: { id: inv.id } });
+    }
   });
-
-  // Sincroniza la inversión ligada al activo, para no duplicar el registro.
-  const inv = await db.inversion.findUnique({ where: { activoId: id } });
-
-  if (costoCents > 0 && inv) {
-    await db.inversion.update({
-      where: { id: inv.id },
-      data: {
-        descripcion: nombre,
-        proveedor,
-        valorCents: costoCents,
-        formaPago,
-        fecha: fechaCompra ?? inv.fecha,
-      },
-    });
-  } else if (costoCents > 0 && !inv) {
-    await db.inversion.create({
-      data: {
-        descripcion: nombre,
-        proveedor,
-        valorCents: costoCents,
-        formaPago,
-        fecha: fechaCompra ?? new Date(),
-        activoId: id,
-      },
-    });
-  } else if (costoCents === 0 && inv) {
-    await db.inversion.delete({ where: { id: inv.id } });
-  }
 
   revalidatePath("/activos");
   revalidatePath("/inversion");

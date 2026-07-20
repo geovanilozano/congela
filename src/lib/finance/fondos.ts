@@ -18,6 +18,24 @@ export interface ReglaFondo {
 
 export type Reparto = Record<string, number>;
 
+/** Pasa los fondos (con su regla) al formato que espera el motor de reparto. Se usa tanto
+ *  en el cierre real (caja/actions) como en el preview del cierre (caja/page), para que
+ *  ambos calculen EXACTAMENTE lo mismo y no puedan divergir. */
+export function mapearReglas(
+  fondos: { nombre: string; regla: { tipo: string; valorCents: number | null; valor: number | null; prioridad: number; activo: boolean } | null }[],
+): ReglaFondo[] {
+  return fondos
+    .filter((f) => f.regla)
+    .map((f) => ({
+      fondo: f.nombre,
+      tipo: f.regla!.tipo as TipoRegla,
+      valorCents: f.regla!.valorCents ?? undefined,
+      valor: f.regla!.valor ?? undefined,
+      prioridad: f.regla!.prioridad,
+      activo: f.regla!.activo,
+    }));
+}
+
 export interface ResultadoReparto {
   /** Cuánto le toca a cada fondo. */
   porFondo: Reparto;

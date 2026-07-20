@@ -3,6 +3,7 @@ import { formatMoney, fromCents } from "@/lib/finance/money";
 import { crearEmpleado, registrarAsistencia, registrarPago, eliminarEmpleado, actualizarEmpleado } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
@@ -98,10 +99,8 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Salario ($)</span>
-          <input
+          <InputDinero
             name="salarioPesos"
-            type="number"
-            min="0"
             defaultValue={enEdicion ? fromCents(enEdicion.salarioCents) : undefined}
             className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
           />
@@ -197,7 +196,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
               {/* Pago rápido */}
               <form action={registrarPago} className="mt-2 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="empleadoId" value={e.id} />
-                <input name="valorPesos" type="number" min="0" placeholder="Valor $" className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+                <InputDinero name="valorPesos" placeholder="Valor $" className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                 <input name="concepto" defaultValue="Salario" className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                 <BotonGuardar className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">Registrar pago</BotonGuardar>
               </form>

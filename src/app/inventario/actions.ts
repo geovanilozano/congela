@@ -11,19 +11,23 @@ export async function crearInsumo(formData: FormData) {
   const nombre = String(formData.get("nombre") || "").trim();
   if (!nombre) return;
   const stock = Number(formData.get("stock")) || 0;
-  const insumo = await db.insumoInventario.create({
-    data: {
-      nombre,
-      unidad: String(formData.get("unidad") || "unidad"),
-      stock,
-      stockMinimo: Number(formData.get("stockMinimo")) || 0,
-    },
-  });
-  if (stock > 0) {
-    await db.movimientoInventario.create({
-      data: { insumoId: insumo.id, cantidad: stock, concepto: "Stock inicial" },
+  // El insumo y su movimiento de "Stock inicial" van juntos: si el segundo fallara,
+  // quedaría un insumo con stock pero sin movimiento y el libro no cuadraría.
+  await db.$transaction(async (tx) => {
+    const insumo = await tx.insumoInventario.create({
+      data: {
+        nombre,
+        unidad: String(formData.get("unidad") || "unidad"),
+        stock,
+        stockMinimo: Number(formData.get("stockMinimo")) || 0,
+      },
     });
-  }
+    if (stock > 0) {
+      await tx.movimientoInventario.create({
+        data: { insumoId: insumo.id, cantidad: stock, concepto: "Stock inicial" },
+      });
+    }
+  });
   revalidatePath("/inventario");
 }
 

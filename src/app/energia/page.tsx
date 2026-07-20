@@ -15,6 +15,7 @@ import {
 } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { BotonEliminar } from "@/components/BotonEliminar";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +125,7 @@ export default async function EnergiaPage() {
       <form action={guardarPrecioKwh} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <label className="text-sm">
           <span className="text-slate-500">Precio del kWh ($)</span>
-          <input name="precioPesos" type="number" min="0" step="1" defaultValue={precioKwhCents ? fromCents(precioKwhCents) : ""} className="mt-1 w-40 rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="precioPesos" defaultValue={precioKwhCents ? fromCents(precioKwhCents) : undefined} className="mt-1 w-40 rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <BotonGuardar className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">Guardar precio</BotonGuardar>
       </form>

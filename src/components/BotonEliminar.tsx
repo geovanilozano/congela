@@ -9,7 +9,9 @@ export function BotonEliminar({
   id,
   mensaje = "¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.",
   children,
-  className = "text-xs text-red-500 hover:underline",
+  // Área táctil cómoda y visualmente distinta (es la acción destructiva): en celular un
+  // enlace de 12px pegado a "Editar" se toca por error.
+  className = "inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50",
 }: {
   action: (fd: FormData) => void | Promise<void>;
   id?: number | string;

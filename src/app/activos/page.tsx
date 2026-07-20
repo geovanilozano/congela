@@ -3,6 +3,7 @@ import { formatMoney, fromCents } from "@/lib/finance/money";
 import { crearActivo, actualizarActivo, eliminarActivo } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 import { fechaParaInput } from "@/lib/fechas";
 
 export const dynamic = "force-dynamic";
@@ -126,7 +127,7 @@ export default async function ActivosPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Costo ($)</span>
-          <input name="costoPesos" type="number" min="0" defaultValue={enEdicion ? fromCents(enEdicion.costoCents) : ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <InputDinero name="costoPesos" defaultValue={enEdicion ? fromCents(enEdicion.costoCents) : undefined} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Forma de pago</span>

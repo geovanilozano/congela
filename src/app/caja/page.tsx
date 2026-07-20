@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { repartir, ReglaFondo } from "@/lib/finance/fondos";
+import { repartir, mapearReglas } from "@/lib/finance/fondos";
 import { ensureFondos } from "@/lib/seed";
 import { cerrarCaja, anularUltimoCierre } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
@@ -35,16 +35,8 @@ export default async function CajaPage({
 
   const totalPendiente = ventas.reduce((a, v) => a + v.totalCents, 0);
 
-  const reglas: ReglaFondo[] = fondos
-    .filter((f) => f.regla)
-    .map((f) => ({
-      fondo: f.nombre,
-      tipo: f.regla!.tipo as ReglaFondo["tipo"],
-      valorCents: f.regla!.valorCents ?? undefined,
-      valor: f.regla!.valor ?? undefined,
-      prioridad: f.regla!.prioridad,
-      activo: f.regla!.activo,
-    }));
+  // Mismo mapeo que usa el cierre real (una sola fuente de verdad, no puede divergir).
+  const reglas = mapearReglas(fondos);
 
   const preview = repartir(totalPendiente, reglas);
 

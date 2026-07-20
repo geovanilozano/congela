@@ -3,6 +3,7 @@ import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
 import { guardarRegla } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -175,12 +176,9 @@ export default async function FondosPage() {
 
                 <label>
                   <span className="text-slate-500">Monto fijo ($)</span>
-                  <input
+                  <InputDinero
                     name="valorPesos"
-                    type="number"
-                    min="0"
-                    step="1"
-                    defaultValue={r?.valorCents ? r.valorCents / 100 : 0}
+                    defaultValue={r?.valorCents ? r.valorCents / 100 : undefined}
                     className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5"
                   />
                 </label>

@@ -167,9 +167,9 @@ export default async function VentasPage({
                 <td className={v.formaPago === "credito" ? "text-amber-600" : "text-emerald-600"}>{v.formaPago}</td>
                 <td className="text-right font-medium">{formatMoney(v.totalCents)}</td>
                 <td className="pr-3 text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <Link href={`/ventas?editar=${v.id}`} className="text-xs text-slate-600 hover:underline">Editar</Link>
-                    <Link href={`/ventas/${v.id}/factura`} className="text-xs text-sky-600 hover:underline">Factura</Link>
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    <Link href={`/ventas?editar=${v.id}`} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100">Editar</Link>
+                    <Link href={`/ventas/${v.id}/factura`} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-sky-600 hover:bg-sky-50">Factura</Link>
                     <BotonEliminar action={eliminarVenta} id={v.id} />
                   </div>
                 </td>

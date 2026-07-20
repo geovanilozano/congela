@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Onest } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { getSesion } from "@/lib/auth/session";
+import { puedeAcceder } from "@/lib/auth/permisos";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -32,6 +35,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const sesion = await getSesion();
+
+  // Autorización REAL de lectura: el proxy solo comprueba la firma del token (optimista).
+  // Aquí, para las rutas protegidas (las que traen la cabecera x-pathname que pone el proxy),
+  // se re-valida contra la BD con `getSesion()` (rol/estado vivos): un usuario desactivado o
+  // degradado pierde el acceso a las páginas al instante, no solo a las escrituras.
+  const ruta = (await headers()).get("x-pathname");
+  if (ruta) {
+    if (!sesion) redirect("/login");
+    if (!puedeAcceder(sesion.rol, ruta)) redirect("/");
+  }
 
   return (
     <html lang="es" className={`h-full antialiased ${display.variable} ${body.variable}`}>

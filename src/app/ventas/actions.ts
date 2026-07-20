@@ -114,6 +114,7 @@ export async function registrarPagoCliente(formData: FormData) {
 
   await db.venta.update({ where: { id }, data: { pagada: true, pagadaEn: new Date() } });
   revalidatePath("/clientes");
+  revalidatePath("/ventas");
   revalidatePath("/");
 }
 

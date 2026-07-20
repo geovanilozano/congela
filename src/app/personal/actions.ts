@@ -59,15 +59,24 @@ export async function registrarPago(formData: FormData) {
   await exigirDueno();
   const empleadoId = Number(formData.get("empleadoId"));
   const valorPesos = Number(formData.get("valorPesos")) || 0;
-  if (valorPesos <= 0) return;
-  await db.pagoNomina.create({
-    data: {
-      empleadoId,
-      valorCents: toCents(valorPesos),
-      concepto: String(formData.get("concepto") || "Salario"),
-    },
+  if (!empleadoId || valorPesos <= 0) return;
+  const valorCents = toCents(valorPesos);
+  const concepto = String(formData.get("concepto") || "Salario");
+  const empleado = await db.empleado.findUnique({ where: { id: empleadoId }, select: { nombre: true } });
+
+  // La nómina es el mayor costo del negocio: se registra también como gasto (categoría
+  // "nomina") para que reduzca la utilidad en reportes y tablero, igual que el
+  // mantenimiento con costo. Ambas escrituras van juntas en una transacción.
+  await db.$transaction(async (tx) => {
+    await tx.pagoNomina.create({ data: { empleadoId, valorCents, concepto } });
+    await tx.compraGasto.create({
+      data: { categoria: "nomina", descripcion: `Nómina: ${empleado?.nombre ?? "empleado"} (${concepto})`, valorCents },
+    });
   });
+
   revalidatePath("/personal");
+  revalidatePath("/compras");
+  revalidatePath("/");
 }
 
 export async function eliminarEmpleado(formData: FormData) {

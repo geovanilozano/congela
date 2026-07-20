@@ -27,7 +27,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  // Se pasa la ruta al layout (vía cabecera) para que allí se re-autorice contra la BD
+  // (rol/estado VIVOS). Así la LECTURA de páginas también respeta una desactivación o un
+  // cambio de rol al instante, no solo la escritura. Las rutas públicas (login) no pasan
+  // por aquí, así que el layout no verá la cabecera y no exigirá sesión.
+  const headers = new Headers(req.headers);
+  headers.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 // Se aplica a todo menos: /login, /api/keepalive (ping del cron, sin sesión),
