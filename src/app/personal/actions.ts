@@ -5,6 +5,7 @@ import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocal, fechaLocalODefecto } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
+import { auditar } from "@/lib/auditoria";
 
 export async function crearEmpleado(formData: FormData) {
   await exigirDueno();
@@ -81,6 +82,11 @@ export async function registrarPago(formData: FormData) {
 
 export async function eliminarEmpleado(formData: FormData) {
   await exigirDueno();
-  await db.empleado.delete({ where: { id: Number(formData.get("id")) } });
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const empleado = await db.empleado.findUnique({ where: { id }, select: { nombre: true } });
+  await db.empleado.delete({ where: { id } });
+  // Ojo: por cascada esto borra también su historial de pagos de nómina y asistencias.
+  await auditar({ accion: "eliminar", entidad: "empleado", entidadId: id, detalle: `Empleado «${empleado?.nombre ?? id}» (con su historial de nómina)` });
   revalidatePath("/personal");
 }

@@ -6,6 +6,7 @@ import { fechaLocalODefecto } from "@/lib/fechas";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { exigirRol } from "@/lib/auth/guard";
+import { auditar, conMonto } from "@/lib/auditoria";
 
 // Liga la venta a un cliente por nombre: usa el existente o crea uno mínimo (solo nombre).
 // Los datos completos del cliente se gestionan en la sección Clientes.
@@ -99,6 +100,8 @@ export async function actualizarVenta(formData: FormData) {
     },
   });
 
+  await auditar({ accion: "actualizar", entidad: "venta", entidadId: id, detalle: conMonto(`Venta #${id}`, subtotalCents) });
+
   revalidatePath("/ventas");
   revalidatePath("/caja");
   revalidatePath("/");
@@ -125,8 +128,9 @@ export async function eliminarVenta(formData: FormData) {
   await exigirRol("dueno", "cajero");
   const id = Number(formData.get("id"));
   const venta = await db.venta.findUnique({ where: { id } });
-  if (venta?.cierreId) return; // no borrar ventas ya cerradas en caja
+  if (!venta || venta.cierreId) return; // no borrar ventas ya cerradas en caja
   await db.venta.delete({ where: { id } });
+  await auditar({ accion: "eliminar", entidad: "venta", entidadId: id, detalle: conMonto(`Venta #${id}`, venta.totalCents) });
   revalidatePath("/ventas");
   revalidatePath("/caja");
 }

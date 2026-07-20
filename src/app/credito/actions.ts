@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fechaLocalODefecto } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
+import { auditar, conMonto } from "@/lib/auditoria";
 import { Prisma } from "@/generated/prisma/client";
 
 // Suma meses SIN el desbordamiento clásico de JS: un crédito que arranca el 31-ene no
@@ -166,9 +167,16 @@ export async function eliminarCredito(formData: FormData) {
   await exigirDueno();
   const id = Number(formData.get("id"));
   if (!id) return;
+  const credito = await db.credito.findUnique({ where: { id }, select: { entidad: true, montoCents: true } });
   await db.$transaction(async (tx) => {
     await tx.credito.delete({ where: { id } }); // cascada: cuotas y pagos
     await recalcularFondoCredito(tx);
+  });
+  await auditar({
+    accion: "eliminar",
+    entidad: "credito",
+    entidadId: id,
+    detalle: conMonto(`Crédito «${credito?.entidad || "sin entidad"}»`, credito?.montoCents ?? 0),
   });
   revalidatePath("/credito");
   revalidatePath("/fondos");
@@ -236,6 +244,13 @@ export async function registrarPago(formData: FormData) {
     // Reajustar la reserva del fondo a las próximas cuotas de los créditos que sigan
     // activos: baja al pagar una cuota y se desactiva solo cuando ya no queda ninguno.
     await recalcularFondoCredito(tx);
+  });
+
+  await auditar({
+    accion: "crear",
+    entidad: "abonoCredito",
+    entidadId: creditoId,
+    detalle: conMonto(`Abono al crédito #${creditoId}`, aplicadoCents),
   });
 
   revalidatePath("/credito");

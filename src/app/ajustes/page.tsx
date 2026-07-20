@@ -22,13 +22,14 @@ export default async function AjustesPage({
   searchParams: Promise<{ error?: string; restaurado?: string }>;
 }) {
   const sp = await searchParams;
-  const [usuarios, claveOcr, negocioNombre, negocioNit, negocioDireccion, negocioTelefono] = await Promise.all([
+  const [usuarios, claveOcr, negocioNombre, negocioNit, negocioDireccion, negocioTelefono, bitacora] = await Promise.all([
     db.usuario.findMany({ orderBy: { id: "asc" } }),
     getAjuste("anthropicApiKey"),
     getAjuste("negocioNombre"),
     getAjuste("negocioNit"),
     getAjuste("negocioDireccion"),
     getAjuste("negocioTelefono"),
+    db.registroAuditoria.findMany({ orderBy: { fecha: "desc" }, take: 50 }),
   ]);
 
   return (
@@ -178,6 +179,64 @@ export default async function AjustesPage({
             Borrar todo y empezar limpio
           </BotonEliminar>
         </div>
+      </div>
+
+      {/* Bitácora de acciones sensibles */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold text-slate-700">🕵️ Bitácora de movimientos</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Quién hizo qué y cuándo en lo que toca el dinero: cierres de caja, ventas editadas o
+          borradas, abonos, créditos, usuarios y borrados masivos. Últimos 50 registros.
+        </p>
+
+        {bitacora.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400">Aún no hay movimientos registrados.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[620px] text-sm">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="py-2">Cuándo</th>
+                  <th>Quién</th>
+                  <th>Acción</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bitacora.map((r) => (
+                  <tr key={r.id} className="border-t border-slate-100">
+                    <td className="whitespace-nowrap py-1.5 text-slate-500">
+                      {new Date(r.fecha).toLocaleString("es-CO", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <span className="font-medium text-slate-700">{r.usuarioNombre}</span>
+                      {r.rol && <span className="ml-1 text-xs text-slate-400">({etiquetaRol[r.rol] ?? r.rol})</span>}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                          r.accion === "eliminar" || r.accion === "anular"
+                            ? "bg-red-50 text-red-700"
+                            : r.accion === "cerrar" || r.accion === "restaurar"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {r.accion} {r.entidad}
+                      </span>
+                    </td>
+                    <td className="text-slate-600">{r.detalle ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

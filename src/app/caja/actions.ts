@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { repartirDetallado, mapearReglas } from "@/lib/finance/fondos";
 import { exigirRol } from "@/lib/auth/guard";
+import { auditar, conMonto } from "@/lib/auditoria";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -65,11 +66,20 @@ export async function cerrarCaja() {
       });
     }
 
-    return { estado: "ok" as const };
+    return { estado: "ok" as const, cierreId: cierre.id, totalCents };
   });
 
   // El redirect va fuera de la transacción (por dentro la abortaría).
   if (resultado.estado === "sinResto") redirect("/caja?error=sinResto");
+
+  if (resultado.estado === "ok") {
+    await auditar({
+      accion: "cerrar",
+      entidad: "cierre",
+      entidadId: resultado.cierreId,
+      detalle: conMonto(`Cierre #${resultado.cierreId}`, resultado.totalCents),
+    });
+  }
 
   revalidatePath("/caja");
   revalidatePath("/fondos");
@@ -86,9 +96,9 @@ export async function cerrarCaja() {
 export async function anularUltimoCierre() {
   await exigirRol("dueno", "cajero");
 
-  await db.$transaction(async (tx) => {
+  const anulado = await db.$transaction(async (tx) => {
     const ultimo = await tx.cierreCaja.findFirst({ orderBy: { id: "desc" } });
-    if (!ultimo) return;
+    if (!ultimo) return null;
 
     // Las ventas vuelven a estar pendientes de cierre.
     await tx.venta.updateMany({ where: { cierreId: ultimo.id }, data: { cierreId: null } });
@@ -96,7 +106,17 @@ export async function anularUltimoCierre() {
     await tx.movimientoFondo.deleteMany({ where: { cierreId: ultimo.id } });
     // Y se borra el cierre en sí.
     await tx.cierreCaja.delete({ where: { id: ultimo.id } });
+    return ultimo;
   });
+
+  if (anulado) {
+    await auditar({
+      accion: "anular",
+      entidad: "cierre",
+      entidadId: anulado.id,
+      detalle: conMonto(`Anulación del cierre #${anulado.id}`, anulado.totalCents),
+    });
+  }
 
   revalidatePath("/caja");
   revalidatePath("/fondos");

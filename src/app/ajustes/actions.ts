@@ -6,6 +6,7 @@ import { setAjuste, setAjusteSeguro } from "@/lib/ajustes";
 import { exigirDueno } from "@/lib/auth/guard";
 import { ROLES } from "@/lib/auth/permisos";
 import { restaurarRespaldo } from "@/lib/respaldo";
+import { auditar } from "@/lib/auditoria";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -40,7 +41,8 @@ export async function crearUsuario(formData: FormData) {
   const existe = await db.usuario.findUnique({ where: { usuario } });
   if (existe) return; // usuario repetido: no hacer nada
 
-  await db.usuario.create({ data: { nombre, usuario, passwordHash: hashPassword(clave), rol } });
+  const creado = await db.usuario.create({ data: { nombre, usuario, passwordHash: hashPassword(clave), rol } });
+  await auditar({ accion: "crear", entidad: "usuario", entidadId: creado.id, detalle: `Usuario «${usuario}» con rol ${rol}` });
   revalidatePath("/ajustes");
 }
 
@@ -55,6 +57,7 @@ export async function eliminarUsuario(formData: FormData) {
     if (duenos <= 1) return;
   }
   await db.usuario.delete({ where: { id } });
+  await auditar({ accion: "eliminar", entidad: "usuario", entidadId: id, detalle: `Usuario «${u.usuario}» (rol ${u.rol})` });
   revalidatePath("/ajustes");
 }
 
@@ -76,6 +79,8 @@ export async function restaurarRespaldoAccion(formData: FormData) {
 
   const r = await restaurarRespaldo(datos);
   if (!r.ok) redirect("/ajustes?error=restauracion");
+
+  await auditar({ accion: "restaurar", entidad: "datos", detalle: `Restauró un respaldo (${r.totalFilas} filas)` });
 
   revalidatePath("/", "layout");
   redirect(`/ajustes?restaurado=${r.totalFilas}`);
@@ -119,6 +124,10 @@ export async function borrarDatosDemo() {
       await tx.reglaReparto.update({ where: { id: fondoCredito.regla.id }, data: { valorCents: 0, activo: true } });
     }
   });
+
+  // La bitácora NO se borra aquí a propósito: justamente debe quedar constancia de que
+  // alguien borró todos los datos, y de quién fue.
+  await auditar({ accion: "eliminar", entidad: "datos", detalle: "Borró TODOS los datos de operación" });
 
   revalidatePath("/", "layout");
 }

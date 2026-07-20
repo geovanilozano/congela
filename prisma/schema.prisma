@@ -233,6 +233,27 @@ model Usuario {
   createdAt    DateTime @default(now())
 }
 
+// Bitácora de acciones sensibles: quién hizo qué y cuándo. En un negocio de caja con
+// varios usuarios es lo que permite rendir cuentas, resolver dudas ("¿quién borró esa
+// venta?") y detectar errores o fraude.
+//
+// El nombre del usuario se guarda COPIADO (no solo el id) para que el registro siga
+// siendo legible aunque después se elimine o renombre ese usuario.
+model RegistroAuditoria {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int?
+  usuarioNombre String
+  rol           String?
+  accion        String // crear | actualizar | eliminar | cerrar | anular | restaurar
+  entidad       String // venta | cierre | credito | empleado | gasto | usuario | datos
+  entidadId     Int?
+  detalle       String? // resumen legible, ej. "Venta #12 · $30.000"
+  fecha         DateTime @default(now())
+
+  @@index([fecha])
+  @@index([entidad])
+}
+
 // ---------------------------------------------------------------------------
 // Operación: activos, producción, inventario, compras/gastos
 // ---------------------------------------------------------------------------
