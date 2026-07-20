@@ -109,6 +109,7 @@ export async function crearLiquidacion(formData: FormData) {
       tarifaCuCents,
       subsidioPct: numeroOpcional(formData.get("subsidioPct")) ?? 0,
       subsistenciaKwh: Math.max(0, Math.round(Number(formData.get("subsistenciaKwh")) || 173)),
+      consumoTotalKwh: Math.max(0, Math.round(Number(formData.get("consumoTotalKwh")) || 0)),
       alumbradoPct: numeroOpcional(formData.get("alumbradoPct")) ?? 6,
       aseoTotalCents: toCents(Number(formData.get("aseoTotalPesos")) || 0),
       aseoPct: numeroOpcional(formData.get("aseoPct")) ?? 0,

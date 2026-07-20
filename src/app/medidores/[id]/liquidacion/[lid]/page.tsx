@@ -109,8 +109,11 @@ export default async function FacturaMedidorPage({ params }: { params: Promise<{
               <tr className="border-b border-slate-100">
                 <td className="py-2 text-slate-700">Descuento (subsidio)</td>
                 <td className="py-2 text-right text-slate-500">
-                  {liq.subsidioPct}% sobre {r.kwhSubsidiado} de {r.consumoKwh} kWh
-                  {r.energiaCents > 0 && ` (${Math.round((r.subsidioCents / r.energiaCents) * 100)}% real)`}
+                  {liq.subsidioPct}%
+                  {liq.consumoTotalKwh > 0
+                    ? ` · tu parte del recibo (${liq.consumoTotalKwh} kWh)`
+                    : ` sobre ${r.kwhSubsidiado} de ${r.consumoKwh} kWh`}
+                  {r.energiaCents > 0 && ` · ${Math.round((r.subsidioCents / r.energiaCents) * 100)}% real`}
                 </td>
                 <td className="py-2 text-right font-medium text-red-600">− {formatMoney(r.subsidioCents)}</td>
               </tr>

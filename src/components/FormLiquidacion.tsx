@@ -19,6 +19,7 @@ export function FormLiquidacion({
   subsidioPctDefault,
   subsistenciaDefault,
   alumbradoPctDefault,
+  consumoTotalDefault,
 }: {
   medidorId: number;
   factor: number;
@@ -29,6 +30,7 @@ export function FormLiquidacion({
   subsidioPctDefault: number;
   subsistenciaDefault: number;
   alumbradoPctDefault: number;
+  consumoTotalDefault: number | null;
 }) {
   const [f, setF] = useState({
     lecturaAnterior: lecturaAnteriorDefault != null ? String(lecturaAnteriorDefault) : "",
@@ -36,6 +38,7 @@ export function FormLiquidacion({
     tarifaPesos: tarifaPesosDefault != null ? String(tarifaPesosDefault) : "",
     subsidioPct: String(subsidioPctDefault),
     subsistenciaKwh: String(subsistenciaDefault),
+    consumoTotalKwh: consumoTotalDefault ? String(consumoTotalDefault) : "",
     alumbradoPct: String(alumbradoPctDefault),
     aseoTotalPesos: "",
     aseoPct: "",
@@ -56,6 +59,7 @@ export function FormLiquidacion({
     tarifaCuCents: Math.round(num(f.tarifaPesos) * 100),
     subsidioPct: num(f.subsidioPct),
     subsistenciaKwh: num(f.subsistenciaKwh),
+    consumoTotalKwh: num(f.consumoTotalKwh),
     alumbradoPct: num(f.alumbradoPct),
     aseoTotalCents: Math.round(num(f.aseoTotalPesos) * 100),
     aseoPct: num(f.aseoPct),
@@ -114,10 +118,18 @@ export function FormLiquidacion({
               <span className="text-slate-500">Consumo de subsistencia (kWh)</span>
               <input {...numProps} name="subsistenciaKwh" value={f.subsistenciaKwh} onChange={set("subsistenciaKwh")} placeholder="173" className={inputCls} />
             </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="text-slate-500">Consumo TOTAL del recibo (kWh) — si varios medidores comparten el recibo</span>
+              <input {...numProps} name="consumoTotalKwh" value={f.consumoTotalKwh} onChange={set("consumoTotalKwh")} placeholder="0 = este medidor es el único" className={inputCls} />
+            </label>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
             El subsidio solo aplica hasta el consumo de subsistencia (por eso a consumos altos no se
             descuenta todo). En Barrancabermeja el alumbrado es ~6% y la subsistencia ~173 kWh.
+            <br />
+            <b>Varios medidores en un mismo recibo:</b> escribí el consumo TOTAL del recibo y el
+            subsidio (que es uno solo) se reparte entre ellos según lo que consumió cada uno. Dejalo
+            en 0 si este medidor es el único del recibo.
           </p>
         </div>
 
@@ -150,7 +162,10 @@ export function FormLiquidacion({
               <>
                 <Fila etiqueta="Descuento (subsidio)" valor={`− ${formatMoney(r.subsidioCents)}`} rojo />
                 <p className="-mt-1 pl-1 text-[11px] text-slate-400">
-                  {num(f.subsidioPct)}% sobre {r.kwhSubsidiado} de {r.consumoKwh} kWh
+                  {num(f.subsidioPct)}%
+                  {num(f.consumoTotalKwh) > 0
+                    ? ` · tu parte del recibo (${num(f.consumoTotalKwh)} kWh)`
+                    : ` sobre ${r.kwhSubsidiado} de ${r.consumoKwh} kWh`}
                   {r.energiaCents > 0 && ` · ${Math.round((r.subsidioCents / r.energiaCents) * 100)}% real`}
                 </p>
               </>

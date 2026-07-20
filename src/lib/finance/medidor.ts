@@ -17,6 +17,7 @@ export interface EntradaLiquidacion {
   tarifaCuCents: number; // centavos de peso por kWh
   subsidioPct: number; // % del extracto (ej. 47, 50)
   subsistenciaKwh: number; // tope de kWh subsidiados
+  consumoTotalKwh: number; // consumo TOTAL del recibo (0 = este medidor es el único)
   alumbradoPct: number; // % de la energía (ej. 6)
   aseoTotalCents: number; // cargo fijo de aseo del extracto
   aseoPct: number; // % de aseo que paga el cliente
@@ -44,10 +45,17 @@ export function liquidarMedidor(e: EntradaLiquidacion): ResultadoLiquidacion {
   const tarifa = Math.max(0, e.tarifaCuCents);
   const energiaCents = consumoKwh * tarifa;
 
-  // El subsidio solo cubre el consumo hasta el tope de subsistencia (así lo aplica ESSA):
-  // por eso a consumos altos no se subsidia todo.
-  const kwhSubsidiado = Math.min(consumoKwh, Math.max(0, e.subsistenciaKwh));
-  const subsidioCents = Math.round(kwhSubsidiado * tarifa * (pctValido(e.subsidioPct) / 100));
+  // Subsidio. El tope de subsistencia (y por tanto el subsidio) es del RECIBO COMPLETO,
+  // no de cada medidor. Si varios medidores comparten el recibo (consumoTotalKwh > 0), se
+  // calcula el subsidio del recibo entero y se reparte proporcional a lo que consumió este
+  // medidor. Si es el único (0), el total del recibo es su propio consumo.
+  const totalReciboKwh = e.consumoTotalKwh > 0 ? e.consumoTotalKwh : consumoKwh;
+  const kwhSubsidiadoRecibo = Math.min(totalReciboKwh, Math.max(0, e.subsistenciaKwh));
+  const subsidioReciboCents = Math.round(kwhSubsidiadoRecibo * tarifa * (pctValido(e.subsidioPct) / 100));
+  const proporcion = totalReciboKwh > 0 ? Math.min(1, consumoKwh / totalReciboKwh) : 0;
+  const subsidioCents = Math.round(subsidioReciboCents * proporcion);
+  // La parte de kWh subsidiados que le corresponde a ESTE medidor (para mostrarla).
+  const kwhSubsidiado = Math.round(kwhSubsidiadoRecibo * proporcion);
 
   // Alumbrado público: un % del valor de la energía.
   const alumbradoClienteCents = Math.round(energiaCents * (pctValido(e.alumbradoPct) / 100));

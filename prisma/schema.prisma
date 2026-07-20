@@ -426,6 +426,10 @@ model LiquidacionMedidor {
   // Subsidio: % del extracto aplicado SOLO al consumo de subsistencia (así lo cobra ESSA).
   subsidioPct         Float          @default(0) // % del extracto (ej. 47, 50)
   subsistenciaKwh     Int            @default(173) // tope de kWh subsidiados (Barrancabermeja ~173)
+  // Si varios medidores comparten el MISMO recibo de ESSA: consumo total del recibo. El
+  // subsidio del recibo (uno solo) se reparte entre los medidores proporcional a su consumo.
+  // 0 = este medidor es el único del recibo (el subsidio se aplica completo a su consumo).
+  consumoTotalKwh     Int            @default(0)
   // Alumbrado público: % del valor de la energía (en Barrancabermeja ~6%).
   alumbradoPct        Float          @default(6)
   // Aseo: cargo fijo del extracto; el cliente paga un % (opcional).
