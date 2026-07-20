@@ -217,6 +217,22 @@ export async function registrarPago(formData: FormData) {
     if (faltan === 0) {
       await tx.credito.update({ where: { id: creditoId }, data: { estado: "pagado" } });
     }
+
+    // El dinero apartado en el fondo "Crédito" se usa para pagar la cuota: se debita (hasta
+    // lo que haya apartado, sin dejarlo en negativo). Así el fondo se vacía al pagar y vuelve
+    // a apartar para la próxima cuota en los siguientes cierres.
+    const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" } });
+    if (fondoCredito) {
+      const saldo =
+        (await tx.movimientoFondo.aggregate({ where: { fondoId: fondoCredito.id }, _sum: { montoCents: true } }))._sum.montoCents ?? 0;
+      const debitar = Math.min(aplicadoCents, Math.max(0, saldo));
+      if (debitar > 0) {
+        await tx.movimientoFondo.create({
+          data: { fondoId: fondoCredito.id, montoCents: -debitar, concepto: `Pago de cuota (crédito #${creditoId})` },
+        });
+      }
+    }
+
     // Reajustar la reserva del fondo a las próximas cuotas de los créditos que sigan
     // activos: baja al pagar una cuota y se desactiva solo cuando ya no queda ninguno.
     await recalcularFondoCredito(tx);

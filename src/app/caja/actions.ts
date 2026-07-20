@@ -23,7 +23,23 @@ export async function cerrarCaja() {
     const totalCents = ventas.reduce((a, v) => a + v.totalCents, 0);
 
     const fondos = await tx.fondo.findMany({ include: { regla: true } });
-    const { porFondo, sinAsignarCents } = repartirDetallado(totalCents, mapearReglas(fondos));
+    const reglas = mapearReglas(fondos);
+
+    // El fondo "Crédito" solo debe COMPLETAR la próxima cuota, no volver a apartarla entera
+    // en cada cierre. Se limita su aporte a lo que le falta para llegar a la cuota (se le
+    // descuenta lo que ya tiene apartado). Así, una vez reunida la cuota deja de apartar y
+    // ese dinero pasa a la Utilidad; al pagar la cuota el fondo se vacía (ver registrarPago)
+    // y vuelve a apartar para la siguiente. Funciona con cierres diarios, semanales o mensuales.
+    const fondoCredito = fondos.find((f) => f.nombre === "Crédito");
+    if (fondoCredito?.regla?.activo && fondoCredito.regla.tipo === "fijo") {
+      const saldo =
+        (await tx.movimientoFondo.aggregate({ where: { fondoId: fondoCredito.id }, _sum: { montoCents: true } }))._sum.montoCents ?? 0;
+      const objetivo = fondoCredito.regla.valorCents ?? 0;
+      const regla = reglas.find((r) => r.fondo === "Crédito");
+      if (regla) regla.valorCents = Math.max(0, objetivo - saldo);
+    }
+
+    const { porFondo, sinAsignarCents } = repartirDetallado(totalCents, reglas);
 
     // Si no hay ningún fondo "resto" (Utilidad) activo, parte del dinero se quedaría
     // sin dueño. Antes desaparecía en silencio; ahora no se cierra la caja.

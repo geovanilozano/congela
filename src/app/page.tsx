@@ -117,7 +117,8 @@ export default async function Home() {
   const mantProximos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "proximo").length;
 
   // Detalle de las cuotas vencidas: cuánto se debe y hace cuántos días vence la más vieja.
-  const montoVencidoCents = cuotasVencidas.reduce((a, q) => a + q.cuotaCents, 0);
+  // Lo realmente vencido descuenta lo ya abonado a cada cuota (soporta pagos parciales).
+  const montoVencidoCents = cuotasVencidas.reduce((a, q) => a + (q.cuotaCents - q.abonadoCents), 0);
   const masVieja = cuotasVencidas.reduce<Date | null>(
     (min, q) => (min === null || q.fechaVencimiento < min ? q.fechaVencimiento : min),
     null,
