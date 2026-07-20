@@ -1,0 +1,48 @@
+name: CI
+
+# Puerta de calidad: corre en cada push a master y en cada Pull Request.
+# Los tests ya existen (Vitest) pero antes no se ejecutaban solos; esto garantiza que
+# un cambio que rompa tipos, lint o la lógica financiera se detecte ANTES de desplegar.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Si se empuja varias veces seguidas, cancela las corridas viejas del mismo ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Chequeo de tipos
+        run: npx tsc --noEmit
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # El build no toca la base (las páginas son dinámicas), pero se pasan valores
+          # de relleno para que ningún módulo falle al leer una variable en tiempo de build.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          AUTH_SECRET: valor-de-relleno-solo-para-el-build-de-ci

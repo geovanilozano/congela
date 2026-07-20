@@ -64,6 +64,8 @@ model CuotaAmortizacion {
   abonadoCents    Int          @default(0)
   estado          String       @default("pendiente") // "pendiente" | "parcial" | "pagada" | "vencida"
   pago            PagoCredito?
+
+  @@index([creditoId])
 }
 
 model PagoCredito {
@@ -75,6 +77,8 @@ model PagoCredito {
   valorCents Int
   fecha      DateTime           @default(now())
   comprobanteUrl String?
+
+  @@index([creditoId])
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +129,8 @@ model Cliente {
   tipo      String   @default("contado") // "contado" | "credito"
   ventas    Venta[]
   createdAt DateTime @default(now())
+
+  @@index([nombre])
 }
 
 model Venta {

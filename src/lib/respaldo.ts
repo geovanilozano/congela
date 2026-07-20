@@ -95,6 +95,19 @@ export async function restaurarRespaldo(datos: unknown): Promise<ResultadoRestau
           await cliente[modelo].createMany({ data });
           totalFilas += data.length;
         }
+
+        // Reajustar las secuencias de autoincremento de Postgres. Se insertaron ids
+        // EXPLÍCITOS, así que la secuencia quedó atrás y el PRÓXIMO insert (una venta nueva,
+        // un abono) reusaría un id existente -> error de llave única. Se pone cada secuencia
+        // en el máximo id actual. (Se omite "ajuste": su llave es `clave`, no un id serial.)
+        const raw = tx as unknown as { $executeRawUnsafe: (q: string) => Promise<number> };
+        for (const { modelo } of ORDEN_RESTAURACION) {
+          if (modelo === "ajuste") continue;
+          const tabla = modelo.charAt(0).toUpperCase() + modelo.slice(1); // delegado -> nombre de tabla
+          await raw.$executeRawUnsafe(
+            `SELECT setval(pg_get_serial_sequence('"${tabla}"', 'id'), COALESCE((SELECT MAX(id) FROM "${tabla}"), 1), (SELECT MAX(id) FROM "${tabla}") IS NOT NULL)`,
+          );
+        }
       },
       { timeout: 30000, maxWait: 10000 },
     );
