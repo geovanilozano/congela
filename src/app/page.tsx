@@ -7,14 +7,21 @@ import { estadoCuota } from "@/lib/finance/cuotas";
 import { estadoMantenimiento } from "@/lib/mantenimiento";
 import { bajoStock } from "@/lib/inventario";
 import { getAjusteNumero } from "@/lib/ajustes";
+import { fechaParaInput } from "@/lib/fechas";
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
+import { VentasRecientesChart } from "@/components/VentasRecientesChart";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   await ensureFondos();
 
-  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar] = await Promise.all([
+  // Ventana de los últimos 14 días (hoy incluido), en hora local del negocio.
+  const ahora = new Date();
+  const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const inicio14 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 13);
+
+  const [inversiones, creditos, cierres, fondos, generaciones, consumos, precioKwhCents, gastos, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
     db.inversion.findMany(),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -27,6 +34,7 @@ export default async function Home() {
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
     db.venta.findMany({ where: { formaPago: "credito", pagada: false }, select: { clienteId: true, totalCents: true } }),
+    db.venta.findMany({ where: { fecha: { gte: inicio14 } }, select: { fecha: true, totalCents: true } }),
   ]);
 
   const totalGastos = gastos.reduce((a, g) => a + g.valorCents, 0);
@@ -63,6 +71,26 @@ export default async function Home() {
     label: new Date(c.fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }),
     total: c.totalCents,
   }));
+
+  // Ventas totales por día de los últimos 14 días (clave AAAA-MM-DD local).
+  // Se siembran los 14 días en cero para no dejar huecos en la gráfica.
+  const ventasPorDia = new Map<string, number>();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - i);
+    ventasPorDia.set(fechaParaInput(d), 0);
+  }
+  for (const v of ventasRecientes) {
+    const clave = fechaParaInput(v.fecha);
+    if (ventasPorDia.has(clave)) ventasPorDia.set(clave, (ventasPorDia.get(clave) ?? 0) + v.totalCents);
+  }
+  const ventasRecientesData = [...ventasPorDia.entries()].map(([clave, total]) => {
+    const [a, m, dia] = clave.split("-").map(Number);
+    return {
+      label: new Date(a, m - 1, dia).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }),
+      total,
+    };
+  });
+  const ventasHoyCents = ventasPorDia.get(fechaParaInput(inicioHoy)) ?? 0;
 
   // ¿La base está prácticamente vacía? Mostrar una guía de primeros pasos.
   const sinDatos =
@@ -175,6 +203,7 @@ export default async function Home() {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Kpi label="Ventas de hoy" valor={formatMoney(ventasHoyCents)} color="text-sky-700" />
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
         <Kpi label="Saldo del crédito" valor={formatMoney(saldoCredito)} color="text-amber-600" extra={`${avance}% pagado`} />
         <Kpi label="Ingresos (cierres)" valor={formatMoney(ingresosTotales)} color="text-sky-700" />
@@ -199,6 +228,11 @@ export default async function Home() {
           <h2 className="mb-2 text-sm font-semibold text-slate-600">Saldo de cada fondo</h2>
           <FondosChart data={fondosData} />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-slate-600">Ventas de los últimos 14 días</h2>
+        <VentasRecientesChart data={ventasRecientesData} />
       </div>
 
       <div className="flex flex-wrap gap-2 text-sm">
