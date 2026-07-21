@@ -28,13 +28,16 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
   // Las sumas se piden agregadas a la base (aggregate/groupBy) en vez de traer las tablas
   // completas de ventas, gastos, ítems, producción y movimientos solo para reducirlas en JS.
-  const [invAgg, gastosPorCat, produccionAgg, ventasAgg, ventaItemsAgg, utilidadAgg, cierres, ventasTodas, gastosTodos] = await Promise.all([
+  const [invAgg, gastosPorCat, produccionAgg, ventasAgg, ventaItemsAgg, ventasAllTimeAgg, gastosAllTimeAgg, cierres, ventasTodas, gastosTodos] = await Promise.all([
     db.inversion.aggregate({ _sum: { valorCents: true } }),
     db.compraGasto.groupBy({ by: ["categoria"], where: { fecha: rango }, _sum: { valorCents: true } }),
     db.produccion.aggregate({ where: { fecha: rango }, _sum: { bolsas: true } }),
     db.venta.aggregate({ where: { fecha: rango }, _sum: { totalCents: true } }),
     db.ventaItem.aggregate({ where: { venta: { fecha: rango } }, _sum: { cantidad: true } }),
-    db.movimientoFondo.aggregate({ where: { fondo: { nombre: "Utilidad" } }, _sum: { montoCents: true } }),
+    // Recuperación de la inversión: se usa la utilidad REAL acumulada de TODO el histórico
+    // (ventas − gastos), no el saldo del fondo "Utilidad" (que ignoraba los gastos e inflaba el ROI).
+    db.venta.aggregate({ _sum: { totalCents: true } }),
+    db.compraGasto.aggregate({ _sum: { valorCents: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
     // Tendencia: ventas/gastos de los últimos ~13 meses (sin el filtro de fecha del usuario).
     db.venta.findMany({ where: { fecha: { gte: desdeHistorial } }, select: { fecha: true, totalCents: true } }),
@@ -46,13 +49,15 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const bolsasProducidas = produccionAgg._sum.bolsas ?? 0;
   const bolsasVendidas = ventaItemsAgg._sum.cantidad ?? 0;
   const ingresosCents = ventasAgg._sum.totalCents ?? 0;
-  const utilidadCents = utilidadAgg._sum.montoCents ?? 0;
+  // Utilidad REAL acumulada = todas las ventas del negocio − todos los gastos. Es la ganancia
+  // honesta (antes se usaba el saldo del bolsillo "Utilidad", que no descontaba los gastos).
+  const utilidadAcumuladaCents = (ventasAllTimeAgg._sum.totalCents ?? 0) - (gastosAllTimeAgg._sum.valorCents ?? 0);
 
   const precioPromedioCents = bolsasVendidas > 0 ? Math.round(ingresosCents / bolsasVendidas) : 0;
   const costoBolsaCents = costoPorBolsa(gastosCents, bolsasProducidas); // null si no hubo producción
   const margenCents = margenPorBolsa(precioPromedioCents, costoBolsaCents); // null si el costo es indefinido
   const puntoEq = puntoEquilibrio(gastosCents, margenCents);
-  const roi = recuperacionInversion(invertidoCents, utilidadCents);
+  const roi = recuperacionInversion(invertidoCents, utilidadAcumuladaCents);
   // La barra nunca debe ir a ancho negativo (utilidad acumulada &lt; 0) ni pasar de 100%.
   const roiPct = Math.max(0, Math.min(100, roi.porcentaje));
   const utilidadNeta = ingresosCents - gastosCents;
@@ -116,7 +121,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           <div className="h-full bg-emerald-500" style={{ width: `${roiPct}%` }} />
         </div>
         <div className="mt-2 text-sm text-slate-500">
-          {roiPct}% recuperado · Invertido {formatMoney(invertidoCents)} · Utilidad acumulada {formatMoney(utilidadCents)}
+          {roiPct}% recuperado · Invertido {formatMoney(invertidoCents)} · Utilidad acumulada {formatMoney(utilidadAcumuladaCents)} <span className="text-slate-400">(ventas − gastos)</span>
         </div>
       </div>
 

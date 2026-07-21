@@ -24,7 +24,7 @@ export default async function Home() {
   // Las sumas se piden a la base con aggregate/groupBy en vez de traer tablas enteras solo
   // para sumarlas en JS: gastos, energía y movimientos de fondos crecen a diario y esto es
   // el tablero (se carga en cada visita).
-  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
+  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, ventasTotalAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
     db.inversion.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -34,6 +34,7 @@ export default async function Home() {
     db.medidorLectura.aggregate({ _sum: { kwh: true } }),
     getAjusteNumero("precioKwhCents", 0),
     db.compraGasto.aggregate({ _sum: { valorCents: true }, _count: true }),
+    db.venta.aggregate({ _sum: { totalCents: true } }), // ingresos de TODAS las ventas (histórico)
     db.insumoInventario.findMany(),
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
@@ -42,6 +43,7 @@ export default async function Home() {
   ]);
 
   const totalGastos = gastoAgg._sum.valorCents ?? 0;
+  const ingresosVentasCents = ventasTotalAgg._sum.totalCents ?? 0;
 
   const balEnergia = balanceEnergia({
     generacionKwh: genAgg._sum.kwh ?? 0,
@@ -50,7 +52,6 @@ export default async function Home() {
   });
 
   const totalInvertido = invAgg._sum.valorCents ?? 0;
-  const ingresosTotales = cierres.reduce((a, c) => a + c.totalCents, 0);
 
   // Crédito: lo que falta por pagar y el avance, según lo abonado (soporta pagos parciales).
   const todasCuotas = creditos.flatMap((c) => c.cuotas);
@@ -61,11 +62,10 @@ export default async function Home() {
 
   // Saldo de cada fondo = suma de sus movimientos (una sola consulta agregada por fondoId).
   const saldoPorFondoId = new Map(saldosFondo.map((g) => [g.fondoId, g._sum.montoCents ?? 0]));
-  const saldoFondo = (nombre: string) => {
-    const f = fondos.find((x) => x.nombre === nombre);
-    return f ? saldoPorFondoId.get(f.id) ?? 0 : 0;
-  };
-  const utilidad = saldoFondo("Utilidad");
+
+  // Utilidad REAL acumulada = todas las ventas − todos los gastos (la ganancia honesta).
+  // Antes se mostraba el saldo del bolsillo "Utilidad", que no descuenta los gastos.
+  const utilidad = ingresosVentasCents - totalGastos;
 
   // Proyección: cuánto pasará a utilidad cuando se pague el crédito.
   const fondoCredito = fondos.find((f) => f.nombre === "Crédito");
@@ -217,16 +217,16 @@ export default async function Home() {
         <Kpi label="Ventas de hoy" valor={formatMoney(ventasHoyCents)} color="text-sky-700" />
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
         <Kpi label="Saldo del crédito" valor={formatMoney(saldoCredito)} color="text-amber-600" extra={`${avance}% pagado`} />
-        <Kpi label="Ingresos (cierres)" valor={formatMoney(ingresosTotales)} color="text-sky-700" />
+        <Kpi label="Ingresos (ventas)" valor={formatMoney(ingresosVentasCents)} color="text-sky-700" />
         <Kpi label="Gastos registrados" valor={formatMoney(totalGastos)} color="text-red-600" />
-        <Kpi label="Utilidad acumulada" valor={formatMoney(utilidad)} color="text-emerald-600" />
+        <Kpi label="Utilidad acumulada" valor={formatMoney(utilidad)} color={utilidad >= 0 ? "text-emerald-600" : "text-red-600"} extra="ventas − gastos" />
         <Kpi label="Ahorro solar" valor={formatMoney(balEnergia.ahorroCents)} color="text-amber-500" extra={`${balEnergia.porcentajeSolar}% con paneles`} />
       </div>
 
       {cuotaActiva > 0 && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           💡 Cuando termines de pagar el crédito, los <b>{formatMoney(cuotaActiva)}</b> que hoy
-          se apartan para la cuota pasarán automáticamente a tu <b>utilidad</b>.
+          se apartan para la cuota pasarán automáticamente a tu <b>bolsillo de Utilidad</b>.
         </div>
       )}
 
