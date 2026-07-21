@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
 import { guardarRegla } from "./actions";
+import { alternarEsEfectivo } from "../caja/actions";
 import { FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { InputDinero } from "@/components/InputDinero";
@@ -153,6 +154,12 @@ export default async function FondosPage() {
                   <span className="rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-700">Automático</span>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">{NOTA_AUTOMATICO[f.nombre]}</p>
+                <form action={alternarEsEfectivo} className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs">
+                  <input type="hidden" name="fondoId" value={f.id} />
+                  <input type="checkbox" name="esEfectivo" defaultChecked={f.esEfectivo} className="h-4 w-4" />
+                  <span className="text-slate-500">Es efectivo (cuenta para el arqueo)</span>
+                  <button className="ml-auto rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-600 hover:bg-slate-200">Guardar</button>
+                </form>
               </div>
             );
           }
@@ -246,6 +253,16 @@ export default async function FondosPage() {
                     className="h-4 w-4"
                   />
                   <span className="text-slate-600">Activo</span>
+                </label>
+
+                <label className="flex items-end gap-2 pb-1" title="Cuenta como efectivo en el arqueo de caja">
+                  <input
+                    name="esEfectivo"
+                    type="checkbox"
+                    defaultChecked={f.esEfectivo}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-slate-600">Es efectivo</span>
                 </label>
               </div>
 

@@ -89,6 +89,23 @@ model Fondo {
   nombre       String            @unique
   regla        ReglaReparto?
   movimientos  MovimientoFondo[]
+  // Si el saldo de este bolsillo es EFECTIVO en el cajón (cuenta para el arqueo). El dueño
+  // desmarca los que guarde en el banco (p. ej. Reserva) para que no cuenten como caja física.
+  esEfectivo   Boolean           @default(true)
+}
+
+// Registro de un ARQUEO de caja: se cuenta el efectivo físico y se compara con el esperado.
+// esperadoCents se congela (snapshot) al momento del conteo para que el histórico no cambie.
+model ArqueoCaja {
+  id            Int      @id @default(autoincrement())
+  fecha         DateTime @default(now())
+  esperadoCents Int
+  contadoCents  Int
+  diferenciaCents Int // contado − esperado: 0 cuadra, >0 sobrante, <0 faltante
+  nota          String?
+  usuario       String?
+
+  @@index([fecha])
 }
 
 model ReglaReparto {

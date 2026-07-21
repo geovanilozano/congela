@@ -2,6 +2,8 @@
 
 import { db } from "@/lib/db";
 import { repartirDetallado, mapearReglas, ajustarReglaCredito } from "@/lib/finance/fondos";
+import { calcularEsperadoCaja } from "@/lib/finance/arqueo";
+import { toCents } from "@/lib/finance/money";
 import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
 import { revalidatePath } from "next/cache";
@@ -82,6 +84,38 @@ export async function cerrarCaja() {
   revalidatePath("/caja");
   revalidatePath("/fondos");
   revalidatePath("/");
+}
+
+/**
+ * Registra un ARQUEO de caja: guarda cuánto efectivo contó el dueño y lo compara con el
+ * esperado (Σ bolsillos de efectivo − fiado ya repartido sin cobrar). Solo deja constancia; no
+ * mueve plata. El esperado se congela como snapshot para que el histórico no cambie después.
+ */
+export async function arquearCaja(formData: FormData) {
+  const sesion = await exigirRol("dueno", "cajero");
+  const contadoCents = toCents(Number(formData.get("contadoPesos")) || 0);
+  const nota = String(formData.get("nota") || "").trim() || null;
+
+  const { esperadoCents } = await calcularEsperadoCaja();
+  const diferenciaCents = contadoCents - esperadoCents;
+
+  await db.arqueoCaja.create({
+    data: { esperadoCents, contadoCents, diferenciaCents, nota, usuario: sesion.nombre },
+  });
+  await auditar({ accion: "crear", entidad: "arqueo", detalle: conMonto(`Arqueo de caja (dif.)`, diferenciaCents) });
+
+  revalidatePath("/caja");
+}
+
+/** Marca/desmarca si un bolsillo es EFECTIVO (cuenta para el arqueo). */
+export async function alternarEsEfectivo(formData: FormData) {
+  await exigirRol("dueno", "cajero");
+  const fondoId = Number(formData.get("fondoId"));
+  if (!fondoId) return;
+  const esEfectivo = formData.get("esEfectivo") === "on";
+  await db.fondo.update({ where: { id: fondoId }, data: { esEfectivo } });
+  revalidatePath("/fondos");
+  revalidatePath("/caja");
 }
 
 /**

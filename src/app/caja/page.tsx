@@ -1,12 +1,14 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { repartir, mapearReglas, ajustarReglaCredito } from "@/lib/finance/fondos";
+import { calcularEsperadoCaja } from "@/lib/finance/arqueo";
 import { formatFechaHora } from "@/lib/fechas";
 import { ensureFondos } from "@/lib/seed";
-import { cerrarCaja, anularUltimoCierre } from "./actions";
+import { cerrarCaja, anularUltimoCierre, arquearCaja } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { FormConfirm } from "@/components/FormConfirm";
+import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function CajaPage({
 
   // Las tres consultas son independientes: se lanzan en paralelo (un solo viaje
   // de ida y vuelta a la base de datos) en vez de una tras otra.
-  const [{ error }, ventas, fondos, cierres] = await Promise.all([
+  const [{ error }, ventas, fondos, cierres, esperado, arqueos] = await Promise.all([
     searchParams,
     db.venta.findMany({ where: { cierreId: null } }),
     db.fondo.findMany({ include: { regla: true } }),
@@ -28,6 +30,8 @@ export default async function CajaPage({
       orderBy: { id: "desc" },
       take: 10,
     }),
+    calcularEsperadoCaja(),
+    db.arqueoCaja.findMany({ orderBy: { id: "desc" }, take: 5 }),
   ]);
 
   const totalPendiente = ventas.reduce((a, v) => a + v.totalCents, 0);
@@ -101,6 +105,103 @@ export default async function CajaPage({
             Cerrar caja y repartir el dinero
           </BotonGuardar>
         </FormConfirm>
+      </div>
+
+      {/* Arqueo: contar el efectivo real y compararlo con el esperado */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-700">💵 Arqueo: contar el efectivo</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Cuenta el dinero que tienes en el cajón y compáralo con lo que la app espera. Hazlo
+          <b> después de cerrar la caja</b>, cuando ya se repartió todo.
+        </p>
+
+        {esperado.ventasSinCerrarCents > 0 && (
+          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Tienes <b>{formatMoney(esperado.ventasSinCerrarCents)}</b> en ventas sin cerrar. Esa
+            plata ya está en el cajón pero todavía no en los bolsillos. <b>Cierra la caja primero</b> para
+            que el arqueo cuadre.
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {/* Esperado + desglose */}
+          <div className="rounded-lg bg-slate-50 p-4">
+            <div className="text-sm text-slate-500">Esperado en caja</div>
+            <div className="text-2xl font-bold text-slate-800">{formatMoney(esperado.esperadoCents)}</div>
+            <div className="mt-3 space-y-1 text-xs text-slate-500">
+              {esperado.desglose.map((d) => (
+                <div key={d.nombre} className="flex justify-between">
+                  <span>{d.nombre}</span>
+                  <span className="tabular-nums">{formatMoney(d.saldo)}</span>
+                </div>
+              ))}
+              {esperado.fiadoPendienteCents > 0 && (
+                <div className="flex justify-between text-amber-700">
+                  <span>− Fiado por cobrar</span>
+                  <span className="tabular-nums">−{formatMoney(esperado.fiadoPendienteCents)}</span>
+                </div>
+              )}
+              <div className="mt-1 border-t border-slate-200 pt-1 text-[11px] text-slate-400">
+                Solo cuentan los bolsillos marcados como “efectivo” (se elige en Fondos).
+              </div>
+            </div>
+          </div>
+
+          {/* Conteo */}
+          <form action={arquearCaja} className="flex flex-col gap-3">
+            <label className="text-sm">
+              <span className="text-slate-600">¿Cuánto dinero contaste en la caja?</span>
+              <InputDinero
+                name="contadoPesos"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-lg font-semibold"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-slate-600">Nota (opcional)</span>
+              <input
+                name="nota"
+                placeholder="Ej: faltó registrar una compra"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <BotonGuardar className="rounded-lg bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-sky-700">
+              Registrar arqueo
+            </BotonGuardar>
+          </form>
+        </div>
+
+        {arqueos.length > 0 && (
+          <div className="mt-5">
+            <div className="mb-2 text-sm font-medium text-slate-600">Arqueos recientes</div>
+            <div className="space-y-2">
+              {arqueos.map((a) => {
+                const cuadra = a.diferenciaCents === 0;
+                const sobra = a.diferenciaCents > 0;
+                return (
+                  <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                    <span className="text-slate-500">{formatFechaHora(a.fecha)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400">
+                        Contó {formatMoney(a.contadoCents)} · esperado {formatMoney(a.esperadoCents)}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          cuadra
+                            ? "bg-emerald-100 text-emerald-700"
+                            : sobra
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {cuadra ? "Caja cuadrada" : sobra ? `Sobrante ${formatMoney(a.diferenciaCents)}` : `Faltante ${formatMoney(-a.diferenciaCents)}`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div>

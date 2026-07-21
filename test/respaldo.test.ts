@@ -57,10 +57,11 @@ describe("ORDEN_RESTAURACION", () => {
     expect(claves.indexOf("compraGasto")).toBeLessThan(claves.indexOf("movimientoFondo"));
   });
 
-  it("incluye las 26 tablas del respaldo (con sub-medición)", () => {
-    expect(ORDEN_RESTAURACION.length).toBe(26);
+  it("incluye las 27 tablas del respaldo (con sub-medición y arqueo)", () => {
+    expect(ORDEN_RESTAURACION.length).toBe(27);
     const claves = ORDEN_RESTAURACION.map((t) => t.clave);
     expect(claves).toContain("medidorCliente");
     expect(claves).toContain("liquidacionMedidor");
+    expect(claves).toContain("arqueoCaja");
   });
 });

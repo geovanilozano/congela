@@ -64,6 +64,7 @@ export const ORDEN_RESTAURACION: { clave: string; modelo: string }[] = [
   // Sub-medición: el medidor cuelga del cliente (padre); la liquidación cuelga del medidor.
   { clave: "medidorCliente", modelo: "medidorCliente" },
   { clave: "liquidacionMedidor", modelo: "liquidacionMedidor" },
+  { clave: "arqueoCaja", modelo: "arqueoCaja" }, // sin dependencias
   { clave: "ajuste", modelo: "ajuste" },
 ];
 

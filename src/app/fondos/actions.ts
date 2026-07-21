@@ -22,22 +22,27 @@ export async function guardarRegla(formData: FormData) {
   if (actual.fondo?.nombre === "Crédito" || actual.fondo?.nombre === FONDO_INGRESO_ENERGIA) return;
 
   const activo = formData.get("activo") === "on";
+  const esEfectivo = formData.get("esEfectivo") === "on";
   const prioridad = Number(formData.get("prioridad")) || 10;
 
   // "fijo": el usuario escribe pesos. "porcentaje": escribe un número (10 = 10%).
   const valorPesos = Number(formData.get("valorPesos")) || 0;
   const valorPorcentaje = Number(formData.get("valorPorcentaje")) || 0;
 
-  await db.reglaReparto.update({
-    where: { id: reglaId },
-    data: {
-      tipo,
-      activo,
-      prioridad,
-      valorCents: tipo === "fijo" ? toCents(valorPesos) : null,
-      valor: tipo === "porcentaje" ? valorPorcentaje / 100 : null,
-    },
-  });
+  await db.$transaction([
+    db.reglaReparto.update({
+      where: { id: reglaId },
+      data: {
+        tipo,
+        activo,
+        prioridad,
+        valorCents: tipo === "fijo" ? toCents(valorPesos) : null,
+        valor: tipo === "porcentaje" ? valorPorcentaje / 100 : null,
+      },
+    }),
+    // Si el bolsillo es efectivo (cuenta para el arqueo) se guarda en el mismo paso.
+    db.fondo.update({ where: { id: actual.fondoId }, data: { esEfectivo } }),
+  ]);
 
   revalidatePath("/fondos");
   // El preview del cierre en /caja depende de estas reglas: hay que refrescarlo también.
