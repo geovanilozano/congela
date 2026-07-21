@@ -49,6 +49,12 @@ describe("ORDEN_RESTAURACION", () => {
     // medidorCliente depende de cliente; liquidacionMedidor depende de medidorCliente
     expect(claves.indexOf("cliente")).toBeLessThan(claves.indexOf("medidorCliente"));
     expect(claves.indexOf("medidorCliente")).toBeLessThan(claves.indexOf("liquidacionMedidor"));
+    // compraGasto depende de sus orígenes espejo (pagoNomina/reciboServicio/mantenimiento)
+    expect(claves.indexOf("pagoNomina")).toBeLessThan(claves.indexOf("compraGasto"));
+    expect(claves.indexOf("reciboServicio")).toBeLessThan(claves.indexOf("compraGasto"));
+    expect(claves.indexOf("mantenimiento")).toBeLessThan(claves.indexOf("compraGasto"));
+    // movimientoFondo depende de compraGasto (FK gastoId del débito)
+    expect(claves.indexOf("compraGasto")).toBeLessThan(claves.indexOf("movimientoFondo"));
   });
 
   it("incluye las 26 tablas del respaldo (con sub-medición)", () => {

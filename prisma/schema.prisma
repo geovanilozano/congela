@@ -103,18 +103,23 @@ model ReglaReparto {
 }
 
 model MovimientoFondo {
-  id          Int         @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   fondoId     Int
-  fondo       Fondo       @relation(fields: [fondoId], references: [id], onDelete: Cascade)
+  fondo       Fondo        @relation(fields: [fondoId], references: [id], onDelete: Cascade)
   montoCents  Int // positivo entra, negativo sale
   concepto    String
-  fecha       DateTime    @default(now())
+  fecha       DateTime     @default(now())
   cierreId    Int?
-  cierre      CierreCaja? @relation(fields: [cierreId], references: [id])
+  cierre      CierreCaja?  @relation(fields: [cierreId], references: [id])
+  // Débito de un gasto: ata el movimiento a su CompraGasto para poder revertirlo al editar/
+  // borrar el gasto. onDelete Cascade → borrar el gasto elimina su débito automáticamente.
+  gastoId     Int?
+  gasto       CompraGasto? @relation(fields: [gastoId], references: [id], onDelete: Cascade)
 
   @@index([fondoId])
   @@index([cierreId])
   @@index([fecha])
+  @@index([gastoId])
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +215,7 @@ model ReciboServicio {
   fotoUrl       String?
   fecha         DateTime @default(now())
   createdAt     DateTime @default(now())
+  gastosEspejo  CompraGasto[]
 
   @@index([fecha])
   @@index([tipo])
@@ -327,9 +333,23 @@ model CompraGasto {
   fecha       DateTime @default(now())
   fotoUrl     String?
   createdAt   DateTime @default(now())
+  // Débito(s) al bolsillo por este gasto (se borran en cascada al borrar el gasto).
+  movimientos MovimientoFondo[]
+  // Origen del gasto "espejo" (nómina/servicio/mantenimiento): al borrar el origen, la cascada
+  // borra este gasto y, por la relación con MovimientoFondo, también su débito. Cierra además
+  // el bug de los gastos espejo huérfanos.
+  pagoNominaId     Int?
+  pagoNomina       PagoNomina?     @relation(fields: [pagoNominaId], references: [id], onDelete: Cascade)
+  reciboServicioId Int?
+  reciboServicio   ReciboServicio? @relation(fields: [reciboServicioId], references: [id], onDelete: Cascade)
+  mantenimientoId  Int?
+  mantenimiento    Mantenimiento?  @relation(fields: [mantenimientoId], references: [id], onDelete: Cascade)
 
   @@index([fecha])
   @@index([categoria])
+  @@index([pagoNominaId])
+  @@index([reciboServicioId])
+  @@index([mantenimientoId])
 }
 
 // ---------------------------------------------------------------------------
@@ -370,6 +390,7 @@ model PagoNomina {
   valorCents     Int
   concepto       String   @default("Salario")
   comprobanteUrl String?
+  gastosEspejo   CompraGasto[]
 
   @@index([empleadoId])
   @@index([fecha])
@@ -387,6 +408,7 @@ model Mantenimiento {
   estado          String    @default("programado") // programado | realizado
   nota            String?
   createdAt       DateTime  @default(now())
+  gastosEspejo    CompraGasto[]
 
   @@index([activoId])
   @@index([fechaProgramada])

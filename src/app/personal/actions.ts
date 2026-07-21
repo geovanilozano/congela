@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { fechaLocal, fechaLocalODefecto } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
 import { auditar } from "@/lib/auditoria";
+import { debitarGasto } from "@/lib/finance/gastos";
 
 export async function crearEmpleado(formData: FormData) {
   await exigirDueno();
@@ -69,14 +70,21 @@ export async function registrarPago(formData: FormData) {
   // "nomina") para que reduzca la utilidad en reportes y tablero, igual que el
   // mantenimiento con costo. Ambas escrituras van juntas en una transacción.
   await db.$transaction(async (tx) => {
-    await tx.pagoNomina.create({ data: { empleadoId, valorCents, concepto } });
-    await tx.compraGasto.create({
-      data: { categoria: "nomina", descripcion: `Nómina: ${empleado?.nombre ?? "empleado"} (${concepto})`, valorCents },
+    const pago = await tx.pagoNomina.create({ data: { empleadoId, valorCents, concepto } });
+    const gasto = await tx.compraGasto.create({
+      data: {
+        categoria: "nomina",
+        descripcion: `Nómina: ${empleado?.nombre ?? "empleado"} (${concepto})`,
+        valorCents,
+        pagoNominaId: pago.id, // enlace al origen: borrar el pago/empleado borra el gasto y su débito
+      },
     });
+    await debitarGasto(tx, gasto.id, "nomina", valorCents);
   });
 
   revalidatePath("/personal");
   revalidatePath("/compras");
+  revalidatePath("/fondos");
   revalidatePath("/");
 }
 

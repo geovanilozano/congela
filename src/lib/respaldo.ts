@@ -47,18 +47,20 @@ export const ORDEN_RESTAURACION: { clave: string; modelo: string }[] = [
   { clave: "cliente", modelo: "cliente" },
   { clave: "venta", modelo: "venta" },
   { clave: "ventaItem", modelo: "ventaItem" },
-  { clave: "movimientoFondo", modelo: "movimientoFondo" },
   { clave: "insumoInventario", modelo: "insumoInventario" },
   { clave: "movimientoInventario", modelo: "movimientoInventario" },
   { clave: "empleado", modelo: "empleado" },
   { clave: "produccion", modelo: "produccion" },
   { clave: "asistencia", modelo: "asistencia" },
+  // Orígenes del gasto espejo ANTES de compraGasto (por las FKs pagoNominaId/reciboServicioId/
+  // mantenimientoId), y compraGasto ANTES de movimientoFondo (por la FK gastoId del débito).
   { clave: "pagoNomina", modelo: "pagoNomina" },
   { clave: "mantenimiento", modelo: "mantenimiento" },
+  { clave: "reciboServicio", modelo: "reciboServicio" },
   { clave: "compraGasto", modelo: "compraGasto" },
+  { clave: "movimientoFondo", modelo: "movimientoFondo" },
   { clave: "energiaGeneracion", modelo: "energiaGeneracion" },
   { clave: "medidorLectura", modelo: "medidorLectura" },
-  { clave: "reciboServicio", modelo: "reciboServicio" },
   // Sub-medición: el medidor cuelga del cliente (padre); la liquidación cuelga del medidor.
   { clave: "medidorCliente", modelo: "medidorCliente" },
   { clave: "liquidacionMedidor", modelo: "liquidacionMedidor" },
