@@ -88,6 +88,7 @@ const NAV_INFERIOR: Item[] = [
   { href: "/clientes", label: "Clientes", icon: "🧑‍🤝‍🧑" },
   { href: "/produccion", label: "Producción", icon: "🏭" },
   { href: "/inventario", label: "Inventario", icon: "📦" },
+  { href: "/medidores", label: "Medidores", icon: "🔢" },
 ];
 
 function esActivo(pathname: string, href: string) {

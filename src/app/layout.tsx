@@ -6,7 +6,7 @@ import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { RegistrarSW } from "@/components/RegistrarSW";
 import { getSesion } from "@/lib/auth/session";
-import { puedeAcceder } from "@/lib/auth/permisos";
+import { puedeAcceder, inicioDeRol } from "@/lib/auth/permisos";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -47,7 +47,7 @@ export default async function RootLayout({
   const ruta = (await headers()).get("x-pathname");
   if (ruta) {
     if (!sesion) redirect("/login");
-    if (!puedeAcceder(sesion.rol, ruta)) redirect("/");
+    if (!puedeAcceder(sesion.rol, ruta)) redirect(inicioDeRol(sesion.rol));
   }
 
   return (

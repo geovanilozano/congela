@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { crearSesion, cerrarSesion } from "@/lib/auth/session";
+import { inicioDeRol } from "@/lib/auth/permisos";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 
@@ -38,7 +39,7 @@ export async function iniciarSesion(formData: FormData) {
     redirect("/login?error=1");
   }
   await crearSesion({ userId: u.id, rol: u.rol, nombre: u.nombre });
-  redirect("/");
+  redirect(inicioDeRol(u.rol));
 }
 
 export async function cerrarSesionAccion() {

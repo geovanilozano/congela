@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { fechaLocalODefecto, fechaLocal } from "@/lib/fechas";
 import { guardarFoto } from "@/lib/upload";
-import { exigirDueno } from "@/lib/auth/guard";
+import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
 import { liquidarMedidor } from "@/lib/finance/medidor";
 import { revalidatePath } from "next/cache";
@@ -28,7 +28,7 @@ function numeroOpcional(v: FormDataEntryValue | null): number | null {
 // ---- Medidores -----------------------------------------------------------
 
 export async function crearMedidor(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const numero = String(formData.get("numero") || "").trim();
   if (!numero) redirect("/medidores?error=numero");
   const clienteId = await resolverClienteId(String(formData.get("clienteNombre") || ""));
@@ -47,7 +47,7 @@ export async function crearMedidor(formData: FormData) {
 }
 
 export async function actualizarMedidor(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const id = Number(formData.get("id"));
   if (!id) return;
   const numero = String(formData.get("numero") || "").trim();
@@ -69,7 +69,7 @@ export async function actualizarMedidor(formData: FormData) {
 }
 
 export async function eliminarMedidor(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const id = Number(formData.get("id"));
   if (!id) return;
   const m = await db.medidorCliente.findUnique({ where: { id }, select: { numero: true } });
@@ -81,7 +81,7 @@ export async function eliminarMedidor(formData: FormData) {
 // ---- Liquidaciones -------------------------------------------------------
 
 export async function crearLiquidacion(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const medidorId = Number(formData.get("medidorId"));
   if (!medidorId) return;
 
@@ -122,7 +122,7 @@ export async function crearLiquidacion(formData: FormData) {
 }
 
 export async function eliminarLiquidacion(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const id = Number(formData.get("id"));
   if (!id) return;
   const liq = await db.liquidacionMedidor.findUnique({ where: { id }, select: { medidorId: true } });
@@ -133,7 +133,7 @@ export async function eliminarLiquidacion(formData: FormData) {
 
 // Marca una liquidación como pagada (o la reabre). Registra el monto en la bitácora.
 export async function alternarPagadaLiquidacion(formData: FormData) {
-  await exigirDueno();
+  await exigirRol("dueno", "medidores");
   const id = Number(formData.get("id"));
   if (!id) return;
   const liq = await db.liquidacionMedidor.findUnique({ where: { id } });

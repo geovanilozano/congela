@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE_SESION, verificar } from "@/lib/auth/token";
-import { puedeAcceder } from "@/lib/auth/permisos";
+import { puedeAcceder, inicioDeRol } from "@/lib/auth/permisos";
 
 // Se ejecuta antes de renderizar cada ruta: exige sesión y respeta los permisos por rol.
 //
@@ -20,10 +20,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Con sesión, pero sin permiso para esta ruta -> al tablero.
+  // Con sesión, pero sin permiso para esta ruta -> a la pantalla de inicio de su rol.
   if (!puedeAcceder(sesion.rol, pathname)) {
     const url = req.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = inicioDeRol(sesion.rol);
     return NextResponse.redirect(url);
   }
 
