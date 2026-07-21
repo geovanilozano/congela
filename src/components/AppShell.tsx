@@ -96,7 +96,7 @@ function esActivo(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-const etiquetaRol: Record<string, string> = { dueno: "Dueño", cajero: "Cajero", operario: "Operario" };
+const etiquetaRol: Record<string, string> = { dueno: "Dueño", cajero: "Cajero", operario: "Operario", medidores: "Medidores" };
 
 export function AppShell({ children, rol, nombre }: { children: React.ReactNode; rol: string; nombre: string }) {
   const pathname = usePathname();

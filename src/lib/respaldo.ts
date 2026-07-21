@@ -15,6 +15,11 @@ const CAMPOS_FECHA = new Set([
 
 type Fila = Record<string, unknown>;
 
+// Claves de ajustes que NUNCA van en el respaldo (secretos). Se conservan al restaurar.
+// Espejo de CLAVES_SECRETAS en @/lib/ajustes (se inlinea para no cargar Prisma en este
+// módulo, que se prueba con funciones puras sin base de datos).
+const CLAVES_SECRETAS: string[] = ["growattClave", "anthropicApiKey"];
+
 /** Convierte los campos de fecha (texto ISO) de una fila en objetos Date. */
 export function revivirFechas(fila: Fila): Fila {
   const salida: Fila = { ...fila };
@@ -89,7 +94,15 @@ export async function restaurarRespaldo(datos: unknown): Promise<ResultadoRestau
 
         // Borrar en orden inverso (hijos antes que padres).
         for (const { modelo } of [...ORDEN_RESTAURACION].reverse()) {
-          await cliente[modelo].deleteMany();
+          if (modelo === "ajuste") {
+            // El respaldo NO trae los secretos (growattClave, anthropicApiKey) a propósito; si
+            // los borráramos aquí quedarían perdidos tras restaurar (Growatt/OCR desconectados).
+            // Se conservan; el resto de ajustes (nombre/NIT/precio kWh) sí se reemplaza.
+            const ajusteDel = cliente[modelo] as unknown as { deleteMany: (a: { where: unknown }) => Promise<unknown> };
+            await ajusteDel.deleteMany({ where: { clave: { notIn: CLAVES_SECRETAS } } });
+          } else {
+            await cliente[modelo].deleteMany();
+          }
         }
 
         // Insertar en orden (padres antes que hijos), reviviendo las fechas.

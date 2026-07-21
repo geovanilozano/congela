@@ -21,6 +21,9 @@ export async function crearVenta(formData: FormData) {
 
   // Sin precio no hay venta: se avisa en vez de guardar una venta de $0 que descuadra el cierre.
   if (precioPesos <= 0) redirect("/ventas?error=precio");
+  // El fiado SIN cliente crea un "por cobrar" fantasma: suma a lo que te deben pero no queda
+  // bajo ningún cliente, así que nunca se puede cobrar ni saldar. Se exige el nombre.
+  if (formaPago === "credito" && !clienteNombre) redirect("/ventas?error=fiadoSinCliente");
 
   const precioUnitCents = toCents(precioPesos);
   const subtotalCents = precioUnitCents * cantidad;
@@ -64,6 +67,7 @@ export async function actualizarVenta(formData: FormData) {
   const fecha = fechaLocalODefecto(formData.get("fecha"));
 
   if (precioPesos <= 0) redirect(`/ventas?editar=${id}&error=precio`);
+  if (formaPago === "credito" && !clienteNombre) redirect(`/ventas?editar=${id}&error=fiadoSinCliente`);
 
   const precioUnitCents = toCents(precioPesos);
   const subtotalCents = precioUnitCents * cantidad;
@@ -109,6 +113,9 @@ export async function registrarPagoCliente(formData: FormData) {
   if (!venta || venta.formaPago !== "credito" || venta.pagada) return;
 
   await db.venta.update({ where: { id }, data: { pagada: true, pagadaEn: new Date() } });
+  // Cobrar un fiado mueve el estado de una cuenta por cobrar (dinero): queda en la bitácora,
+  // igual que anular un cierre o eliminar una venta.
+  await auditar({ accion: "cobrar", entidad: "venta", entidadId: id, detalle: conMonto(`Cobro de fiado (venta #${id})`, venta.totalCents) });
   revalidatePath("/clientes");
   revalidatePath("/ventas");
   revalidatePath("/");

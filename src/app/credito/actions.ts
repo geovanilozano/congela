@@ -101,6 +101,7 @@ export async function crearCredito(formData: FormData) {
 
   revalidatePath("/credito");
   revalidatePath("/fondos");
+  revalidatePath("/"); // el tablero muestra inversión/cuotas: refrescar al crear un crédito
 }
 
 /**

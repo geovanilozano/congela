@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { setAjuste, setAjusteSeguro } from "@/lib/ajustes";
+import { setAjuste, setAjusteSeguro, CLAVES_SECRETAS } from "@/lib/ajustes";
 import { exigirDueno } from "@/lib/auth/guard";
 import { ROLES } from "@/lib/auth/permisos";
 import { restaurarRespaldo } from "@/lib/respaldo";
@@ -119,7 +119,9 @@ export async function borrarDatosDemo() {
     await tx.energiaGeneracion.deleteMany();
     await tx.medidorLectura.deleteMany();
     await tx.reciboServicio.deleteMany();
-    await tx.ajuste.deleteMany();
+    // Se borran los ajustes de operación PERO se conservan los secretos (clave de Growatt, API
+    // key de OCR): así la conexión no se pierde al limpiar los datos de demostración.
+    await tx.ajuste.deleteMany({ where: { clave: { notIn: [...CLAVES_SECRETAS] } } });
 
     // Reiniciar la cuota que aparta el fondo "Crédito".
     const fondoCredito = await tx.fondo.findUnique({ where: { nombre: "Crédito" }, include: { regla: true } });

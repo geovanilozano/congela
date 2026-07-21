@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { getSesion } from "@/lib/auth/session";
 import { formatMoney } from "@/lib/finance/money";
 
-export type AccionAuditada = "crear" | "actualizar" | "eliminar" | "cerrar" | "anular" | "restaurar";
+export type AccionAuditada = "crear" | "actualizar" | "eliminar" | "cerrar" | "anular" | "restaurar" | "cobrar";
 
 export async function auditar(datos: {
   accion: AccionAuditada;

@@ -162,9 +162,12 @@ export default async function Home() {
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {[
-              { href: "/credito", icon: "💳", n: "1", t: "Registra el crédito", d: "El préstamo con que pagas los equipos" },
-              { href: "/activos", icon: "🧰", n: "2", t: "Carga tus equipos", d: "Refrigeradores y cubeteros (se suman a la inversión)" },
-              { href: "/ventas", icon: "🧾", n: "3", t: "Registra las ventas", d: "Y cierra la caja para repartir el dinero" },
+              { href: "/ajustes", icon: "🏢", n: "1", t: "Datos del negocio", d: "Nombre y NIT: salen en tus facturas" },
+              { href: "/fondos", icon: "🪙", n: "2", t: "Arma tus bolsillos", d: "Arriendo, crédito, reserva y utilidad" },
+              { href: "/energia", icon: "⚡", n: "3", t: "Precio del kWh", d: "Para calcular el ahorro de los paneles" },
+              { href: "/credito", icon: "💳", n: "4", t: "Registra el crédito", d: "El préstamo con que pagas los equipos" },
+              { href: "/activos", icon: "🧰", n: "5", t: "Carga tus equipos", d: "Refrigeradores y cubeteros (se suman a la inversión)" },
+              { href: "/ventas", icon: "🧾", n: "6", t: "Registra las ventas", d: "Y cierra la caja para repartir el dinero" },
             ].map((p) => (
               <Link
                 key={p.href}

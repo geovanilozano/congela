@@ -73,9 +73,9 @@ export default async function AjustesPage({
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="font-semibold text-slate-700">🔔 Avisos al celular</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Recibí un aviso en el celular con los pendientes del día: fiado por cobrar, cuotas del
-          crédito vencidas, ventas sin cerrar y bajo stock. Activalo en cada dispositivo donde
-          quieras recibirlos. <b>En iPhone, primero instalá la app</b> (Compartir → Agregar a inicio).
+          Recibe un aviso en el celular con los pendientes del día: fiado por cobrar, cuotas del
+          crédito vencidas, ventas sin cerrar y bajo stock. Actívalo en cada dispositivo donde
+          quieras recibirlos. <b>En iPhone, primero instala la app</b> (Compartir → Agregar a inicio).
         </p>
         <div className="mt-3">
           <ActivarAvisos />

@@ -50,6 +50,12 @@ export default async function VentasPage({
           <strong>No se guardó la venta.</strong> Falta el precio (debe ser mayor que $0).
         </div>
       )}
+      {sp.error === "fiadoSinCliente" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>El fiado necesita un cliente.</strong> Escribe el nombre del cliente para poder
+          cobrarle después; una venta a crédito sin cliente no se puede saldar.
+        </div>
+      )}
       {sp.ok && (
         <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
           ✓ Venta guardada.

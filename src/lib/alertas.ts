@@ -31,7 +31,7 @@ export async function resumenParaNotificar(): Promise<ResumenAvisos> {
   const lineas: string[] = [];
   if (fiadoCents > 0) lineas.push(`Te deben ${formatMoney(fiadoCents)} en fiado${clientesDeben > 0 ? ` (${clientesDeben} cliente(s))` : ""}`);
   if (vencidas.length > 0) lineas.push(`${vencidas.length} cuota(s) del crédito vencida(s)`);
-  if (pendientesCents > 0) lineas.push(`${formatMoney(pendientesCents)} en ventas sin cerrar — recordá cerrar la caja`);
+  if (pendientesCents > 0) lineas.push(`${formatMoney(pendientesCents)} en ventas sin cerrar — recuerda cerrar la caja`);
   if (insumosBajos.length > 0) lineas.push(`${insumosBajos.length} insumo(s) con bajo stock`);
 
   return {

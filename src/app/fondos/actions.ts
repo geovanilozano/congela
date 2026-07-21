@@ -13,6 +13,13 @@ export async function guardarRegla(formData: FormData) {
   // caja (si el fondo era el "resto"). El motor solo entiende estos tres valores.
   if (!["fijo", "porcentaje", "resto"].includes(tipo)) return;
   if (!reglaId) return;
+
+  // El fondo "Crédito" se autogestiona (recalcularFondoCredito reescribe su regla en cada
+  // evento de crédito). No se edita a mano ni por POST directo: se perdería en el recálculo.
+  const actual = await db.reglaReparto.findUnique({ where: { id: reglaId }, include: { fondo: true } });
+  if (!actual) return;
+  if (actual.fondo?.nombre === "Crédito") return;
+
   const activo = formData.get("activo") === "on";
   const prioridad = Number(formData.get("prioridad")) || 10;
 

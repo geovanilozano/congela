@@ -125,6 +125,34 @@ export default async function FondosPage() {
           const saldo = saldos[i];
           const color = COLORES[i % COLORES.length];
           const r = f.regla;
+
+          // El fondo "Crédito" se AUTOGESTIONA: recalcularFondoCredito reescribe su regla en
+          // cada evento de crédito (crear/pagar). Si el dueño lo editara aquí, el cambio se
+          // perdería en el siguiente recálculo. Por eso se muestra en SOLO LECTURA.
+          if (f.nombre === "Crédito") {
+            return (
+              <div key={f.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.punto}`} />
+                    <h2 className="truncate font-semibold text-slate-800">{f.nombre}</h2>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${color.chip}`}>
+                    Saldo: {formatMoney(saldo)}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600">{describirRegla(r)}</span>
+                  <span className="rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-700">Automático</span>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  Este fondo se ajusta solo: aparta lo que falta para la próxima cuota de tus
+                  créditos activos y se vacía al pagarla. No hace falta configurarlo a mano.
+                </p>
+              </div>
+            );
+          }
+
           return (
             <form
               key={f.id}
