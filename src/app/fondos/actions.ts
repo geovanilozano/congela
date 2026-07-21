@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { exigirDueno } from "@/lib/auth/guard";
+import { FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 
 export async function guardarRegla(formData: FormData) {
   await exigirDueno();
@@ -14,11 +15,11 @@ export async function guardarRegla(formData: FormData) {
   if (!["fijo", "porcentaje", "resto"].includes(tipo)) return;
   if (!reglaId) return;
 
-  // El fondo "Crédito" se autogestiona (recalcularFondoCredito reescribe su regla en cada
-  // evento de crédito). No se edita a mano ni por POST directo: se perdería en el recálculo.
+  // Los bolsillos automáticos (Crédito, Energía revendida) los maneja la app: no se editan a
+  // mano ni por POST directo (se perderían o mezclarían con el reparto del cierre).
   const actual = await db.reglaReparto.findUnique({ where: { id: reglaId }, include: { fondo: true } });
   if (!actual) return;
-  if (actual.fondo?.nombre === "Crédito") return;
+  if (actual.fondo?.nombre === "Crédito" || actual.fondo?.nombre === FONDO_INGRESO_ENERGIA) return;
 
   const activo = formData.get("activo") === "on";
   const prioridad = Number(formData.get("prioridad")) || 10;

@@ -2,8 +2,16 @@ import { db } from "@/lib/db";
 import { ensureFondos } from "@/lib/seed";
 import { formatMoney } from "@/lib/finance/money";
 import { guardarRegla } from "./actions";
+import { FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { InputDinero } from "@/components/InputDinero";
+
+// Bolsillos que la app maneja sola (no se editan a mano): el de Crédito se recalcula con cada
+// crédito; el de Energía revendida recibe el cobro de los inquilinos al marcar una liquidación.
+const NOTA_AUTOMATICO: Record<string, string> = {
+  "Crédito": "Este fondo se ajusta solo: aparta lo que falta para la próxima cuota de tus créditos activos y se vacía al pagarla. No hace falta configurarlo a mano.",
+  [FONDO_INGRESO_ENERGIA]: "Este bolsillo recibe solo lo que te pagan los inquilinos por la energía (al marcar una liquidación como pagada). No participa del reparto del cierre de caja.",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +88,8 @@ export default async function FondosPage() {
             const color = COLORES[i % COLORES.length];
             const peso = baseReparto > 0 ? (Math.max(0, saldo) / baseReparto) * 100 : 0;
             const r = f.regla;
-            const inactivo = !r?.activo;
+            // Los bolsillos automáticos (sin regla de reparto) no se marcan "Inactivo".
+            const inactivo = !NOTA_AUTOMATICO[f.nombre] && !r?.activo;
             return (
               <div key={f.id}>
                 <div className="flex items-center justify-between gap-3 text-sm">
@@ -126,10 +135,9 @@ export default async function FondosPage() {
           const color = COLORES[i % COLORES.length];
           const r = f.regla;
 
-          // El fondo "Crédito" se AUTOGESTIONA: recalcularFondoCredito reescribe su regla en
-          // cada evento de crédito (crear/pagar). Si el dueño lo editara aquí, el cambio se
-          // perdería en el siguiente recálculo. Por eso se muestra en SOLO LECTURA.
-          if (f.nombre === "Crédito") {
+          // Bolsillos automáticos (Crédito, Energía revendida): la app los maneja sola. Si el
+          // dueño los editara a mano, el cambio se perdería o mezclaría con el reparto. SOLO LECTURA.
+          if (NOTA_AUTOMATICO[f.nombre]) {
             return (
               <div key={f.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
@@ -142,13 +150,9 @@ export default async function FondosPage() {
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600">{describirRegla(r)}</span>
                   <span className="rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-700">Automático</span>
                 </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Este fondo se ajusta solo: aparta lo que falta para la próxima cuota de tus
-                  créditos activos y se vacía al pagarla. No hace falta configurarlo a mano.
-                </p>
+                <p className="mt-3 text-xs text-slate-500">{NOTA_AUTOMATICO[f.nombre]}</p>
               </div>
             );
           }

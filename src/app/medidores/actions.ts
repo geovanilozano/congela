@@ -7,6 +7,7 @@ import { guardarFoto } from "@/lib/upload";
 import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
 import { liquidarMedidor } from "@/lib/finance/medidor";
+import { ensureFondoEnergia, FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 import { numeroOpcional } from "@/lib/forms";
 import { resolverClienteId } from "@/lib/clientes-db";
 import { revalidatePath } from "next/cache";
@@ -125,7 +126,12 @@ export async function eliminarLiquidacion(formData: FormData) {
   if (liq) revalidatePath(`/medidores/${liq.medidorId}`);
 }
 
-// Marca una liquidación como pagada (o la reabre). Registra el monto en la bitácora.
+// Concepto determinístico del movimiento de ingreso, para poder revertirlo si se reabre.
+const conceptoIngresoEnergia = (liqId: number) => `Cobro de energía (liquidación #${liqId})`;
+
+// Marca una liquidación como pagada (o la reabre). Al pagar, el cobro del inquilino ENTRA como
+// ingreso al bolsillo "Energía revendida" (así revender energía deja de verse como pura pérdida:
+// el costo del recibo de ESSA ya es un gasto, y este ingreso lo equilibra). Reabrir lo revierte.
 export async function alternarPagadaLiquidacion(formData: FormData) {
   await exigirRol("dueno", "medidores");
   const id = Number(formData.get("id"));
@@ -134,14 +140,31 @@ export async function alternarPagadaLiquidacion(formData: FormData) {
   if (!liq) return;
 
   const pagada = !liq.pagada;
-  await db.liquidacionMedidor.update({
-    where: { id },
-    data: { pagada, pagadaEn: pagada ? new Date() : null },
+  const totalCents = liquidarMedidor(liq).totalCents;
+  const fondoId = pagada ? await ensureFondoEnergia() : null;
+
+  await db.$transaction(async (tx) => {
+    await tx.liquidacionMedidor.update({
+      where: { id },
+      data: { pagada, pagadaEn: pagada ? new Date() : null },
+    });
+    if (pagada) {
+      // Registrar el ingreso del cobro en el bolsillo "Energía revendida".
+      await tx.movimientoFondo.create({
+        data: { fondoId: fondoId!, montoCents: totalCents, concepto: conceptoIngresoEnergia(id) },
+      });
+    } else {
+      // Reabrir: quitar el ingreso que se había registrado por esta liquidación.
+      const fondo = await tx.fondo.findFirst({ where: { nombre: FONDO_INGRESO_ENERGIA }, select: { id: true } });
+      if (fondo) await tx.movimientoFondo.deleteMany({ where: { fondoId: fondo.id, concepto: conceptoIngresoEnergia(id) } });
+    }
   });
 
   if (pagada) {
-    const r = liquidarMedidor(liq);
-    await auditar({ accion: "actualizar", entidad: "liquidacion", entidadId: id, detalle: conMonto("Cobro de medidor pagado", r.totalCents) });
+    await auditar({ accion: "cobrar", entidad: "liquidacion", entidadId: id, detalle: conMonto("Cobro de medidor pagado", totalCents) });
   }
   revalidatePath(`/medidores/${liq.medidorId}`);
+  revalidatePath("/fondos");
+  revalidatePath("/reportes");
+  revalidatePath("/"); // el ingreso afecta la utilidad del tablero
 }

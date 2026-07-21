@@ -5,6 +5,7 @@ import { FondosChart, IngresosChart, TendenciaChart } from "@/components/Dashboa
 import { ComparativoChart } from "@/components/ComparativoChart";
 import { FiltroFecha } from "@/components/FiltroFecha";
 import { rangoFechas } from "@/lib/fechas";
+import { FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 import { BotonImprimir } from "@/components/BotonImprimir";
 
 // "AAAA-MM" -> "jul 2026"
@@ -28,16 +29,19 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
   // Las sumas se piden agregadas a la base (aggregate/groupBy) en vez de traer las tablas
   // completas de ventas, gastos, ítems, producción y movimientos solo para reducirlas en JS.
-  const [invAgg, gastosPorCat, produccionAgg, ventasAgg, ventaItemsAgg, ventasAllTimeAgg, gastosAllTimeAgg, cierres, ventasTodas, gastosTodos] = await Promise.all([
+  const [invAgg, gastosPorCat, produccionAgg, ventasAgg, ventaItemsAgg, ventasAllTimeAgg, gastosAllTimeAgg, energiaRangoAgg, energiaAllTimeAgg, cierres, ventasTodas, gastosTodos] = await Promise.all([
     db.inversion.aggregate({ _sum: { valorCents: true } }),
     db.compraGasto.groupBy({ by: ["categoria"], where: { fecha: rango }, _sum: { valorCents: true } }),
     db.produccion.aggregate({ where: { fecha: rango }, _sum: { bolsas: true } }),
     db.venta.aggregate({ where: { fecha: rango }, _sum: { totalCents: true } }),
     db.ventaItem.aggregate({ where: { venta: { fecha: rango } }, _sum: { cantidad: true } }),
     // Recuperación de la inversión: se usa la utilidad REAL acumulada de TODO el histórico
-    // (ventas − gastos), no el saldo del fondo "Utilidad" (que ignoraba los gastos e inflaba el ROI).
+    // (ingresos − gastos), no el saldo del fondo "Utilidad" (que ignoraba los gastos e inflaba el ROI).
     db.venta.aggregate({ _sum: { totalCents: true } }),
     db.compraGasto.aggregate({ _sum: { valorCents: true } }),
+    // Ingresos por cobro de energía a inquilinos (bolsillo "Energía revendida"): en el rango y total.
+    db.movimientoFondo.aggregate({ where: { fondo: { nombre: FONDO_INGRESO_ENERGIA }, fecha: rango }, _sum: { montoCents: true } }),
+    db.movimientoFondo.aggregate({ where: { fondo: { nombre: FONDO_INGRESO_ENERGIA } }, _sum: { montoCents: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
     // Tendencia: ventas/gastos de los últimos ~13 meses (sin el filtro de fecha del usuario).
     db.venta.findMany({ where: { fecha: { gte: desdeHistorial } }, select: { fecha: true, totalCents: true } }),
@@ -48,12 +52,17 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const gastosCents = gastosPorCat.reduce((a, g) => a + (g._sum.valorCents ?? 0), 0);
   const bolsasProducidas = produccionAgg._sum.bolsas ?? 0;
   const bolsasVendidas = ventaItemsAgg._sum.cantidad ?? 0;
-  const ingresosCents = ventasAgg._sum.totalCents ?? 0;
-  // Utilidad REAL acumulada = todas las ventas del negocio − todos los gastos. Es la ganancia
-  // honesta (antes se usaba el saldo del bolsillo "Utilidad", que no descontaba los gastos).
-  const utilidadAcumuladaCents = (ventasAllTimeAgg._sum.totalCents ?? 0) - (gastosAllTimeAgg._sum.valorCents ?? 0);
+  const ventasCents = ventasAgg._sum.totalCents ?? 0;
+  const energiaRangoCents = energiaRangoAgg._sum.montoCents ?? 0;
+  // Ingresos = ventas de hielo + cobro de energía revendida a inquilinos.
+  const ingresosCents = ventasCents + energiaRangoCents;
+  // Utilidad REAL acumulada = (todas las ventas + energía revendida) − todos los gastos. Es la
+  // ganancia honesta (antes se usaba el saldo del bolsillo "Utilidad", que no descontaba gastos).
+  const utilidadAcumuladaCents =
+    (ventasAllTimeAgg._sum.totalCents ?? 0) + (energiaAllTimeAgg._sum.montoCents ?? 0) - (gastosAllTimeAgg._sum.valorCents ?? 0);
 
-  const precioPromedioCents = bolsasVendidas > 0 ? Math.round(ingresosCents / bolsasVendidas) : 0;
+  // El costo/precio POR BOLSA se calcula solo con ventas de hielo (la energía no son bolsas).
+  const precioPromedioCents = bolsasVendidas > 0 ? Math.round(ventasCents / bolsasVendidas) : 0;
   const costoBolsaCents = costoPorBolsa(gastosCents, bolsasProducidas); // null si no hubo producción
   const margenCents = margenPorBolsa(precioPromedioCents, costoBolsaCents); // null si el costo es indefinido
   const puntoEq = puntoEquilibrio(gastosCents, margenCents);

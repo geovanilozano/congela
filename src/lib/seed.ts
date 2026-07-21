@@ -11,6 +11,18 @@ const FONDOS_DEFAULT = [
   { nombre: "Utilidad", tipo: "resto", valorCents: null, valor: null, prioridad: 98, activo: true },
 ] as const;
 
+// Bolsillo especial de INGRESO (no participa del reparto del cierre): recibe lo que pagan
+// los inquilinos por la energía revendida. Se crea sin regla, así el motor de reparto lo ignora.
+export const FONDO_INGRESO_ENERGIA = "Energía revendida";
+
+/** Devuelve el id del bolsillo "Energía revendida", creándolo si no existe. Idempotente. */
+export async function ensureFondoEnergia(): Promise<number> {
+  const existente = await db.fondo.findFirst({ where: { nombre: FONDO_INGRESO_ENERGIA }, select: { id: true } });
+  if (existente) return existente.id;
+  const creado = await db.fondo.create({ data: { nombre: FONDO_INGRESO_ENERGIA } });
+  return creado.id;
+}
+
 /** Crea los fondos por defecto si aún no existen. Idempotente. */
 export async function ensureFondos(): Promise<void> {
   const count = await db.fondo.count();

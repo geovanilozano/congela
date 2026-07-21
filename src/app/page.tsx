@@ -7,6 +7,7 @@ import { estadoCuota } from "@/lib/finance/cuotas";
 import { estadoMantenimiento } from "@/lib/mantenimiento";
 import { bajoStock } from "@/lib/inventario";
 import { getAjusteNumero } from "@/lib/ajustes";
+import { FONDO_INGRESO_ENERGIA } from "@/lib/seed";
 import { fechaParaInput } from "@/lib/fechas";
 import { FondosChart, IngresosChart } from "@/components/DashboardCharts";
 import { VentasRecientesChart } from "@/components/VentasRecientesChart";
@@ -24,7 +25,7 @@ export default async function Home() {
   // Las sumas se piden a la base con aggregate/groupBy en vez de traer tablas enteras solo
   // para sumarlas en JS: gastos, energía y movimientos de fondos crecen a diario y esto es
   // el tablero (se carga en cada visita).
-  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, ventasTotalAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
+  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, ventasTotalAgg, energiaAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
     db.inversion.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -35,6 +36,7 @@ export default async function Home() {
     getAjusteNumero("precioKwhCents", 0),
     db.compraGasto.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.venta.aggregate({ _sum: { totalCents: true } }), // ingresos de TODAS las ventas (histórico)
+    db.movimientoFondo.aggregate({ where: { fondo: { nombre: FONDO_INGRESO_ENERGIA } }, _sum: { montoCents: true } }), // cobro de energía a inquilinos
     db.insumoInventario.findMany(),
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
@@ -43,7 +45,8 @@ export default async function Home() {
   ]);
 
   const totalGastos = gastoAgg._sum.valorCents ?? 0;
-  const ingresosVentasCents = ventasTotalAgg._sum.totalCents ?? 0;
+  // Ingresos = ventas de hielo + cobro de energía revendida a inquilinos.
+  const ingresosCents = (ventasTotalAgg._sum.totalCents ?? 0) + (energiaAgg._sum.montoCents ?? 0);
 
   const balEnergia = balanceEnergia({
     generacionKwh: genAgg._sum.kwh ?? 0,
@@ -63,9 +66,9 @@ export default async function Home() {
   // Saldo de cada fondo = suma de sus movimientos (una sola consulta agregada por fondoId).
   const saldoPorFondoId = new Map(saldosFondo.map((g) => [g.fondoId, g._sum.montoCents ?? 0]));
 
-  // Utilidad REAL acumulada = todas las ventas − todos los gastos (la ganancia honesta).
-  // Antes se mostraba el saldo del bolsillo "Utilidad", que no descuenta los gastos.
-  const utilidad = ingresosVentasCents - totalGastos;
+  // Utilidad REAL acumulada = ingresos (ventas + energía revendida) − todos los gastos (la
+  // ganancia honesta). Antes se mostraba el saldo del bolsillo "Utilidad", que no descuenta gastos.
+  const utilidad = ingresosCents - totalGastos;
 
   // Proyección: cuánto pasará a utilidad cuando se pague el crédito.
   const fondoCredito = fondos.find((f) => f.nombre === "Crédito");
@@ -217,7 +220,7 @@ export default async function Home() {
         <Kpi label="Ventas de hoy" valor={formatMoney(ventasHoyCents)} color="text-sky-700" />
         <Kpi label="Total invertido" valor={formatMoney(totalInvertido)} color="text-slate-800" />
         <Kpi label="Saldo del crédito" valor={formatMoney(saldoCredito)} color="text-amber-600" extra={`${avance}% pagado`} />
-        <Kpi label="Ingresos (ventas)" valor={formatMoney(ingresosVentasCents)} color="text-sky-700" />
+        <Kpi label="Ingresos" valor={formatMoney(ingresosCents)} color="text-sky-700" extra="ventas + energía revendida" />
         <Kpi label="Gastos registrados" valor={formatMoney(totalGastos)} color="text-red-600" />
         <Kpi label="Utilidad acumulada" valor={formatMoney(utilidad)} color={utilidad >= 0 ? "text-emerald-600" : "text-red-600"} extra="ventas − gastos" />
         <Kpi label="Ahorro solar" valor={formatMoney(balEnergia.ahorroCents)} color="text-amber-500" extra={`${balEnergia.porcentajeSolar}% con paneles`} />
