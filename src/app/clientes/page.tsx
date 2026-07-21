@@ -96,11 +96,11 @@ export default async function ClientesPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Teléfono</span>
-          <input name="telefono" defaultValue={enEdicion?.telefono ?? ""} className={inputCls} />
+          <input name="telefono" type="tel" inputMode="tel" defaultValue={enEdicion?.telefono ?? ""} className={inputCls} />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Cédula</span>
-          <input name="cedula" defaultValue={enEdicion?.cedula ?? ""} className={inputCls} />
+          <input name="cedula" inputMode="numeric" defaultValue={enEdicion?.cedula ?? ""} className={inputCls} />
         </label>
         <label className="text-sm lg:col-span-2">
           <span className="text-slate-500">Correo electrónico</span>

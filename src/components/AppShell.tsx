@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { puedeAcceder } from "@/lib/auth/permisos";
 import { cerrarSesionAccion } from "@/app/login/actions";
+import { InstalarApp } from "@/components/InstalarApp";
 
 type Item = { href: string; label: string; icon: string };
 type Grupo = { titulo: string | null; items: Item[] };
@@ -77,6 +78,18 @@ const grupos: Grupo[] = [
   },
 ];
 
+// Candidatos para la barra inferior (móvil). Se filtran por rol y se toman los primeros 4;
+// el 5º botón es "Más" (abre el menú completo). El orden cubre a los tres roles: dueño y
+// cajero ven Ventas/Caja/Clientes; el operario cae en Producción/Inventario.
+const NAV_INFERIOR: Item[] = [
+  { href: "/", label: "Inicio", icon: "🏠" },
+  { href: "/ventas", label: "Ventas", icon: "🧾" },
+  { href: "/caja", label: "Caja", icon: "🔒" },
+  { href: "/clientes", label: "Clientes", icon: "🧑‍🤝‍🧑" },
+  { href: "/produccion", label: "Producción", icon: "🏭" },
+  { href: "/inventario", label: "Inventario", icon: "📦" },
+];
+
 function esActivo(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
@@ -95,6 +108,9 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
   const gruposVisibles = grupos
     .map((g) => ({ ...g, items: g.items.filter((i) => puedeAcceder(rol, i.href)) }))
     .filter((g) => g.items.length > 0);
+
+  // Barra inferior (móvil): los 4 destinos más usados que el rol puede ver.
+  const itemsInferior = NAV_INFERIOR.filter((i) => puedeAcceder(rol, i.href)).slice(0, 4);
 
   return (
     <div className="min-h-screen">
@@ -213,7 +229,10 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
       {/* Contenido */}
       <div className={`contenido-principal transition-[padding] duration-300 ${colapsado ? "lg:pl-0" : "lg:pl-64"}`}>
         {/* Barra superior móvil */}
-        <div className="no-print sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
+        <div
+          className="no-print sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 pb-3 backdrop-blur lg:hidden"
+          style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+        >
           <Link href="/" className="flex items-center gap-2 font-display font-bold text-slate-800">
             <span>🧊</span> Congela
           </Link>
@@ -245,10 +264,43 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
           </button>
         )}
 
-        <main className={`mx-auto max-w-6xl px-4 py-6 lg:px-10 lg:py-10 ${colapsado ? "lg:pt-16" : ""}`}>
+        {/* pb-28 en móvil deja aire para la barra inferior fija; en escritorio no existe. */}
+        <main className={`mx-auto max-w-6xl px-4 pt-6 pb-28 lg:px-10 lg:pt-10 lg:pb-10 ${colapsado ? "lg:pt-16" : ""}`}>
           {children}
         </main>
       </div>
+
+      {/* Barra de navegación inferior (solo móvil, modo app): los destinos más usados al
+          alcance del pulgar. El botón "Más" abre el menú completo. */}
+      <nav
+        className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 pb-safe backdrop-blur lg:hidden"
+      >
+        {itemsInferior.map((item) => {
+          const activo = esActivo(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setAbierto(false)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition ${
+                activo ? "text-sky-600" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <span className="text-xl leading-none">{item.icon}</span>
+              {item.label}
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setAbierto(true)}
+          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-slate-500 hover:text-slate-700"
+        >
+          <span className="text-xl leading-none">☰</span>
+          Más
+        </button>
+      </nav>
+
+      <InstalarApp />
     </div>
   );
 }

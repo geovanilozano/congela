@@ -95,7 +95,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Teléfono</span>
-          <input name="telefono" defaultValue={enEdicion?.telefono ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+          <input name="telefono" type="tel" inputMode="tel" defaultValue={enEdicion?.telefono ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5" />
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Salario ($)</span>

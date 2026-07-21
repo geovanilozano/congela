@@ -29,6 +29,36 @@ h3 {
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* --- Sensación de app en el celular ---------------------------------------- */
+
+/* En móvil, iOS Safari hace zoom automático al enfocar cualquier campo < 16px y deja
+   la pantalla descuadrada (el "tell" de que es una web). Forzar 16px lo evita. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Feedback táctil: los botones/enlaces se "hunden" un poco al presionar, como en una app
+   nativa (hover no sirve en touch). Respeta quienes prefieren menos movimiento. */
+@media (prefers-reduced-motion: no-preference) {
+  button:active,
+  a:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Padding para las "safe areas" del celular (notch de iPhone, barra de gestos de Android),
+   usado en el encabezado y en la barra de navegación inferior en modo app (standalone). */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Al imprimir / guardar como PDF: ocultar el menú y los controles, y aprovechar la hoja */
 @media print {
   aside,

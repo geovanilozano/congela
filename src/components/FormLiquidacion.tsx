@@ -74,7 +74,9 @@ export function FormLiquidacion({
   });
 
   const inputCls = "mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm";
-  const numProps = { inputMode: "numeric" as const };
+  // Teclado DECIMAL (con punto): las lecturas, la tarifa CU (824.03) y los % pueden llevar
+  // decimales; "numeric" no muestra el punto en el celular.
+  const numProps = { inputMode: "decimal" as const };
 
   return (
     <form action={accion} className="grid gap-5 lg:grid-cols-3">

@@ -26,7 +26,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0ea5e9",
+  themeColor: "#ffffff", // igual que el encabezado real (blanco), para que la barra del sistema se integre
+  // Ocupar toda la pantalla en modo app (detrás del notch/barra de gestos); el contenido
+  // reserva su espacio con las "safe areas" (ver globals.css y AppShell).
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
