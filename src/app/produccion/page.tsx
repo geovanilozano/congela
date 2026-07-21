@@ -29,15 +29,16 @@ export default async function ProduccionPage({
   const rangoMes = { gte: inicioMes, lte: finMes };
   const nombreMes = ahora.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
 
-  const [registros, activos, empleados, enEdicion, resumenMes, bolsasPorEmpleado] =
+  const [registros, activos, empleados, productos, enEdicion, resumenMes, bolsasPorEmpleado] =
     await Promise.all([
       db.produccion.findMany({
         where: { fecha: rangoFechas(sp) },
-        include: { activo: true, empleado: true },
+        include: { activo: true, empleado: true, producto: true },
         orderBy: { fecha: "desc" },
       }),
       db.activo.findMany({ where: { tipo: "cubetero" }, orderBy: { nombre: "asc" } }),
       db.empleado.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
+      db.producto.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
       sp.editar ? db.produccion.findUnique({ where: { id: Number(sp.editar) } }) : null,
       db.produccion.aggregate({
         where: { fecha: rangoMes },
@@ -139,6 +140,16 @@ export default async function ProduccionPage({
             <option value="tarde">Tarde</option>
             <option value="noche">Noche</option>
           </select>
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Producto</span>
+          <select name="productoId" defaultValue={enEdicion?.productoId ?? ""} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="">— sin producto (solo conteo) —</option>
+            {productos.map((p) => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
+          <span className="mt-0.5 block text-[11px] text-slate-400">Si eliges producto, se descuentan sus insumos y sube su stock.</span>
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Tipo</span>
