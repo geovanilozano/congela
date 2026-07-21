@@ -10,11 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-const money = (cents: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(
-    cents / 100,
-  );
+import { formatMoney } from "@/lib/finance/money";
 
 /**
  * Comparativo mensual: dos barras por mes (ingresos de ventas vs gastos).
@@ -33,7 +29,7 @@ export function ComparativoChart({
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
         <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v) => `${v / 100000}k`} tick={{ fontSize: 11 }} width={40} />
-        <Tooltip formatter={(v, n) => [money(Number(v)), n === "ingresos" ? "Ingresos" : "Gastos"]} />
+        <Tooltip formatter={(v, n) => [formatMoney(Number(v)), n === "ingresos" ? "Ingresos" : "Gastos"]} />
         <Legend formatter={(n) => (n === "ingresos" ? "Ingresos" : "Gastos")} wrapperStyle={{ fontSize: 12 }} />
         <Bar name="ingresos" dataKey="ingresos" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
         <Bar name="gastos" dataKey="gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />

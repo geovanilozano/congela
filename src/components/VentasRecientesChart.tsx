@@ -9,11 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-const money = (cents: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(
-    cents / 100,
-  );
+import { formatMoney } from "@/lib/finance/money";
 
 export function VentasRecientesChart({ data }: { data: { label: string; total: number }[] }) {
   const hayVentas = data.some((d) => d.total > 0);
@@ -25,7 +21,7 @@ export function VentasRecientesChart({ data }: { data: { label: string; total: n
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v) => `${v / 100000}k`} tick={{ fontSize: 11 }} width={40} />
-        <Tooltip formatter={(v) => money(Number(v))} />
+        <Tooltip formatter={(v) => formatMoney(Number(v))} />
         <Line
           type="monotone"
           dataKey="total"

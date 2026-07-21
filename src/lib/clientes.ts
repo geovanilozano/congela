@@ -46,3 +46,28 @@ export function resumenClientes(clientes: ClienteBase[], ventas: VentaCobro[]): 
     })
     .sort((a, b) => b.porCobrarCents - a.porCobrarCents || b.totalCompradoCents - a.totalCompradoCents);
 }
+
+/**
+ * Igual que `resumenClientes` pero a partir de AGREGADOS ya calculados por la base de datos,
+ * en vez de traer toda la tabla de ventas a memoria: `comprasPorCliente` = total comprado por
+ * cliente (groupBy _sum), `pendientes` = las ventas a crédito aún sin pagar (para el "por
+ * cobrar"). Mismo orden de salida (más deuda primero). Evita el over-fetch de /clientes.
+ */
+export function resumenClientesAgg(
+  clientes: ClienteBase[],
+  comprasPorCliente: { clienteId: number | null; totalCents: number }[],
+  pendientes: { clienteId: number | null; totalCents: number }[],
+): ClienteResumen[] {
+  const totalDe = new Map<number, number>();
+  for (const g of comprasPorCliente) if (g.clienteId != null) totalDe.set(g.clienteId, g.totalCents);
+
+  const porCobrarDe = new Map<number, number>();
+  for (const v of pendientes) {
+    if (v.clienteId == null) continue;
+    porCobrarDe.set(v.clienteId, (porCobrarDe.get(v.clienteId) ?? 0) + v.totalCents);
+  }
+
+  return clientes
+    .map((c) => ({ ...c, totalCompradoCents: totalDe.get(c.id) ?? 0, porCobrarCents: porCobrarDe.get(c.id) ?? 0 }))
+    .sort((a, b) => b.porCobrarCents - a.porCobrarCents || b.totalCompradoCents - a.totalCompradoCents);
+}

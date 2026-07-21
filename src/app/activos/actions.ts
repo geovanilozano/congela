@@ -5,13 +5,7 @@ import { toCents } from "@/lib/finance/money";
 import { revalidatePath } from "next/cache";
 import { fechaLocal } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
-
-// Número o null si el campo viene vacío o no es válido (evita meter NaN en un Float).
-function numeroOpcional(v: FormDataEntryValue | null): number | null {
-  if (v === null || String(v).trim() === "") return null;
-  const n = Number(v);
-  return Number.isNaN(n) ? null : n;
-}
+import { numeroOpcional } from "@/lib/forms";
 
 export async function crearActivo(formData: FormData) {
   await exigirDueno();

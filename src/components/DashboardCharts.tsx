@@ -11,13 +11,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatMoney } from "@/lib/finance/money";
 
 const COLORS = ["#0ea5e9", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#14b8a6"];
-
-const money = (cents: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(
-    cents / 100,
-  );
 
 export function IngresosChart({ data }: { data: { label: string; total: number }[] }) {
   if (data.length === 0)
@@ -27,7 +23,7 @@ export function IngresosChart({ data }: { data: { label: string; total: number }
       <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v) => `${v / 100000}k`} tick={{ fontSize: 11 }} width={40} />
-        <Tooltip formatter={(v) => money(Number(v))} />
+        <Tooltip formatter={(v) => formatMoney(Number(v))} />
         <Bar dataKey="total" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -46,7 +42,7 @@ export function TendenciaChart({
       <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
         <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v) => `${v / 100000}k`} tick={{ fontSize: 11 }} width={40} />
-        <Tooltip formatter={(v, n) => [money(Number(v)), n === "ingresos" ? "Ingresos" : "Gastos"]} />
+        <Tooltip formatter={(v, n) => [formatMoney(Number(v)), n === "ingresos" ? "Ingresos" : "Gastos"]} />
         <Bar dataKey="ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
         <Bar dataKey="gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
       </BarChart>
@@ -66,7 +62,7 @@ export function FondosChart({ data }: { data: { nombre: string; saldo: number }[
             <Cell key={i} fill={COLORS[i % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(v) => money(Number(v))} />
+        <Tooltip formatter={(v) => formatMoney(Number(v))} />
       </PieChart>
     </ResponsiveContainer>
   );

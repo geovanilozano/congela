@@ -42,6 +42,11 @@ export default async function MedidoresPage({
           <strong>Falta el número del medidor.</strong> Es obligatorio para registrarlo.
         </div>
       )}
+      {sp.error === "duplicado" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>Ese número de medidor ya está registrado.</strong> Cada medidor debe tener un número único.
+        </div>
+      )}
       {sp.ok && (
         <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
           ✓ Medidor guardado.

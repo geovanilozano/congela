@@ -6,14 +6,7 @@ import { guardarFoto } from "@/lib/upload";
 import { revalidatePath } from "next/cache";
 import { fechaLocal } from "@/lib/fechas";
 import { exigirDueno } from "@/lib/auth/guard";
-
-// Devuelve el número, o null si el campo viene vacío o no es un número válido (evita
-// meter NaN en una columna Float, que Prisma rechaza con un error 500).
-function numeroOpcional(v: FormDataEntryValue | null): number | null {
-  if (v === null || String(v).trim() === "") return null;
-  const n = Number(v);
-  return Number.isNaN(n) ? null : n;
-}
+import { numeroOpcional } from "@/lib/forms";
 
 export async function registrarRecibo(formData: FormData) {
   await exigirDueno();

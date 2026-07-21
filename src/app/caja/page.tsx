@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { repartir, mapearReglas } from "@/lib/finance/fondos";
+import { repartir, mapearReglas, ajustarReglaCredito } from "@/lib/finance/fondos";
+import { formatFechaHora } from "@/lib/fechas";
 import { ensureFondos } from "@/lib/seed";
 import { cerrarCaja, anularUltimoCierre } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
@@ -8,10 +9,6 @@ import { BotonEliminar } from "@/components/BotonEliminar";
 import { FormConfirm } from "@/components/FormConfirm";
 
 export const dynamic = "force-dynamic";
-
-function fmtFecha(d: Date) {
-  return new Date(d).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 
 export default async function CajaPage({
   searchParams,
@@ -37,6 +34,15 @@ export default async function CajaPage({
 
   // Mismo mapeo que usa el cierre real (una sola fuente de verdad, no puede divergir).
   const reglas = mapearReglas(fondos);
+
+  // El fondo "Crédito" solo aporta lo que le falta para completar la próxima cuota. El cierre
+  // real hace este mismo ajuste (caja/actions); aquí se replica para que el preview no mienta.
+  const fondoCredito = fondos.find((f) => f.nombre === "Crédito");
+  if (fondoCredito) {
+    const saldoCredito =
+      (await db.movimientoFondo.aggregate({ where: { fondoId: fondoCredito.id }, _sum: { montoCents: true } }))._sum.montoCents ?? 0;
+    ajustarReglaCredito(reglas, saldoCredito);
+  }
 
   const preview = repartir(totalPendiente, reglas);
 
@@ -104,7 +110,7 @@ export default async function CajaPage({
           {cierres.map((c, idx) => (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-700">Cierre #{c.id} · {fmtFecha(c.fecha)}</span>
+                <span className="font-medium text-slate-700">Cierre #{c.id} · {formatFechaHora(c.fecha)}</span>
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-slate-800">{formatMoney(c.totalCents)}</span>
                   {/* Solo se puede anular el más reciente (el primero de la lista). */}

@@ -66,12 +66,12 @@ export function ActivarAvisos() {
   };
 
   if (estado === "sin-config") {
-    return <p className="text-sm text-slate-400">Los avisos aún no están configurados en el servidor.</p>;
+    return <p className="text-sm text-slate-500">Los avisos aún no están configurados en el servidor.</p>;
   }
   if (estado === "no-soportado") {
     return (
-      <p className="text-sm text-slate-400">
-        Este navegador no soporta avisos. En iPhone, primero <b>instalá la app</b> (Compartir → Agregar a inicio) y activalos desde ahí.
+      <p className="text-sm text-slate-500">
+        Este navegador no soporta avisos. En iPhone, primero <b>instala la app</b> (Compartir → Agregar a inicio) y actívalos desde ahí.
       </p>
     );
   }

@@ -9,6 +9,8 @@ const CAMPOS_FECHA = new Set([
   "createdAt", "fecha", "fechaCompra", "fechaIngreso", "fechaInicio",
   "fechaProgramada", "fechaRealizada", "fechaVencimiento", "garantiaHasta",
   "periodoFin", "periodoInicio", "pagadaEn",
+  // Liquidaciones de medidores:
+  "fechaAnterior", "fechaActual",
 ]);
 
 type Fila = Record<string, unknown>;
@@ -52,6 +54,9 @@ export const ORDEN_RESTAURACION: { clave: string; modelo: string }[] = [
   { clave: "energiaGeneracion", modelo: "energiaGeneracion" },
   { clave: "medidorLectura", modelo: "medidorLectura" },
   { clave: "reciboServicio", modelo: "reciboServicio" },
+  // Sub-medición: el medidor cuelga del cliente (padre); la liquidación cuelga del medidor.
+  { clave: "medidorCliente", modelo: "medidorCliente" },
+  { clave: "liquidacionMedidor", modelo: "liquidacionMedidor" },
   { clave: "ajuste", modelo: "ajuste" },
 ];
 

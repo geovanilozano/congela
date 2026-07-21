@@ -7,17 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
-
-// Liga la venta a un cliente por nombre: usa el existente o crea uno mínimo (solo nombre).
-// Los datos completos del cliente se gestionan en la sección Clientes.
-async function resolverClienteId(nombre: string, formaPago: string): Promise<number | null> {
-  const limpio = nombre.trim();
-  if (!limpio) return null;
-  // Coincidencia sin distinguir mayúsculas ni espacios: "juan", "Juan" y "Juan " son el
-  // mismo cliente. Si no, el fiado se parte entre duplicados y la deuda queda oculta.
-  const existente = await db.cliente.findFirst({ where: { nombre: { equals: limpio, mode: "insensitive" } } });
-  return existente ? existente.id : (await db.cliente.create({ data: { nombre: limpio, tipo: formaPago } })).id;
-}
+import { resolverClienteId } from "@/lib/clientes-db";
 
 export async function crearVenta(formData: FormData) {
   await exigirRol("dueno", "cajero");

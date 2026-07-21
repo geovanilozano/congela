@@ -36,6 +36,22 @@ export function mapearReglas(
     }));
 }
 
+/**
+ * Ajusta la regla del fondo "Crédito" para que en cada cierre solo COMPLETE la próxima
+ * cuota, no la vuelva a apartar entera: su aporte se limita a lo que le falta para llegar al
+ * objetivo (objetivo − saldo ya apartado). Muta la regla en el arreglo recibido.
+ *
+ * Se aplica IGUAL en el cierre real (caja/actions) y en el preview del cierre (caja/page)
+ * para que no puedan divergir. `saldoCreditoCents` = suma de los movimientos del fondo Crédito.
+ */
+export function ajustarReglaCredito(reglas: ReglaFondo[], saldoCreditoCents: number): void {
+  const regla = reglas.find((r) => r.fondo === "Crédito");
+  if (regla?.activo && regla.tipo === "fijo") {
+    const objetivo = regla.valorCents ?? 0;
+    regla.valorCents = Math.max(0, objetivo - saldoCreditoCents);
+  }
+}
+
 export interface ResultadoReparto {
   /** Cuánto le toca a cada fondo. */
   porFondo: Reparto;

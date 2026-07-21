@@ -7,23 +7,10 @@ import { guardarFoto } from "@/lib/upload";
 import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
 import { liquidarMedidor } from "@/lib/finance/medidor";
+import { numeroOpcional } from "@/lib/forms";
+import { resolverClienteId } from "@/lib/clientes-db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
-/** Liga el medidor a un cliente por nombre (usa el existente o crea uno mínimo). */
-async function resolverClienteId(nombre: string): Promise<number | null> {
-  const limpio = nombre.trim();
-  if (!limpio) return null;
-  const existente = await db.cliente.findFirst({ where: { nombre: { equals: limpio, mode: "insensitive" } } });
-  return existente ? existente.id : (await db.cliente.create({ data: { nombre: limpio } })).id;
-}
-
-// Número o null si el campo viene vacío o no es un número válido.
-function numeroOpcional(v: FormDataEntryValue | null): number | null {
-  if (v === null || String(v).trim() === "") return null;
-  const n = Number(v);
-  return Number.isNaN(n) ? null : n;
-}
 
 // ---- Medidores -----------------------------------------------------------
 
@@ -31,6 +18,10 @@ export async function crearMedidor(formData: FormData) {
   await exigirRol("dueno", "medidores");
   const numero = String(formData.get("numero") || "").trim();
   if (!numero) redirect("/medidores?error=numero");
+  // El número identifica físicamente el medidor: no permitir duplicados (mezclarían las
+  // liquidaciones de dos medidores distintos).
+  const dup = await db.medidorCliente.findFirst({ where: { numero } });
+  if (dup) redirect("/medidores?error=duplicado");
   const clienteId = await resolverClienteId(String(formData.get("clienteNombre") || ""));
   await db.medidorCliente.create({
     data: {
@@ -52,6 +43,9 @@ export async function actualizarMedidor(formData: FormData) {
   if (!id) return;
   const numero = String(formData.get("numero") || "").trim();
   if (!numero) redirect(`/medidores?editar=${id}&error=numero`);
+  // No chocar con OTRO medidor que ya tenga ese número.
+  const dup = await db.medidorCliente.findFirst({ where: { numero, id: { not: id } } });
+  if (dup) redirect(`/medidores?editar=${id}&error=duplicado`);
   const clienteId = await resolverClienteId(String(formData.get("clienteNombre") || ""));
   await db.medidorCliente.update({
     where: { id },

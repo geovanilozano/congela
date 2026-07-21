@@ -5,14 +5,10 @@ import { crearVenta, actualizarVenta, eliminarVenta } from "./actions";
 import { BotonEliminar } from "@/components/BotonEliminar";
 import { BotonGuardar } from "@/components/BotonGuardar";
 import { FiltroFecha } from "@/components/FiltroFecha";
-import { rangoFechas, fechaParaInput } from "@/lib/fechas";
+import { rangoFechas, fechaParaInput, formatFechaHora } from "@/lib/fechas";
 import { InputDinero } from "@/components/InputDinero";
 
 export const dynamic = "force-dynamic";
-
-function fmtFechaHora(d: Date) {
-  return new Date(d).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 
 export default async function VentasPage({
   searchParams,
@@ -159,7 +155,7 @@ export default async function VentasPage({
             )}
             {ventas.map((v) => (
               <tr key={v.id} className="border-t border-slate-100">
-                <td className="p-3 text-slate-500">{fmtFechaHora(v.fecha)}</td>
+                <td className="p-3 text-slate-500">{formatFechaHora(v.fecha)}</td>
                 <td className="font-medium text-slate-700">
                   {v.items.map((it) => `${it.cantidad}× ${it.descripcion}`).join(", ")}
                 </td>

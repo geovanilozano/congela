@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/finance/money";
 import { getAjuste } from "@/lib/ajustes";
+import { exigirLecturaPagina } from "@/lib/auth/guard";
 import { BotonImprimir } from "@/components/BotonImprimir";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ function fmtFecha(d: Date) {
 }
 
 export default async function CuentaClientePage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirLecturaPagina("/clientes"); // defensa en profundidad: PII y saldo del cliente
   const { id } = await params;
   const clienteId = Number(id);
   const [cliente, ventas, negNombre] = await Promise.all([

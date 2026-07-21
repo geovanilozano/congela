@@ -38,9 +38,12 @@ async function recalcularFondoCredito(tx: Prisma.TransactionClient) {
     const prox = await tx.cuotaAmortizacion.findFirst({
       where: { creditoId: c.id, estado: { not: "pagada" } },
       orderBy: { numero: "asc" },
-      select: { cuotaCents: true },
+      select: { cuotaCents: true, abonadoCents: true },
     });
-    reservaCents += prox?.cuotaCents ?? 0;
+    // Solo hay que apartar lo que REALMENTE falta de la próxima cuota: si ya se abonó parte
+    // (cuota "parcial"), se descuenta ese abono. Antes se reservaba la cuota entera aunque ya
+    // estuviera medio pagada, sobre-reservando y quitándole plata a la Utilidad.
+    reservaCents += Math.max(0, (prox?.cuotaCents ?? 0) - (prox?.abonadoCents ?? 0));
   }
 
   await tx.reglaReparto.update({

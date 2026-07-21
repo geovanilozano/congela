@@ -24,28 +24,35 @@ function fmtFecha(d: Date) {
 }
 
 export default async function EnergiaPage() {
-  const [generaciones, consumos, precioKwhCents, growattUsuario, growattMsg] = await Promise.all([
-    db.energiaGeneracion.findMany({ orderBy: { fecha: "desc" } }),
-    db.medidorLectura.findMany({ orderBy: { fecha: "desc" } }),
-    getAjusteNumero("precioKwhCents", 0),
-    getAjuste("growattUsuario"),
-    getAjuste("growattMsg"),
-  ]);
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
-  const totalGen = generaciones.reduce((a, g) => a + g.kwh, 0);
-  const totalCons = consumos.reduce((a, c) => a + c.kwh, 0);
+  // Totales (de por vida y del mes) se calculan con `aggregate` en la BD, sin traer todas las
+  // filas. Para la gráfica (últimos 14 días) y el historial (últimos 8) basta un fetch acotado.
+  const [genTot, consTot, genMesAgg, consMesAgg, generaciones, consumos, precioKwhCents, growattUsuario, growattMsg] =
+    await Promise.all([
+      db.energiaGeneracion.aggregate({ _sum: { kwh: true } }),
+      db.medidorLectura.aggregate({ _sum: { kwh: true } }),
+      db.energiaGeneracion.aggregate({ where: { fecha: { gte: inicioMes } }, _sum: { kwh: true } }),
+      db.medidorLectura.aggregate({ where: { fecha: { gte: inicioMes } }, _sum: { kwh: true } }),
+      db.energiaGeneracion.findMany({ orderBy: { fecha: "desc" }, take: 40 }),
+      db.medidorLectura.findMany({ orderBy: { fecha: "desc" }, take: 40 }),
+      getAjusteNumero("precioKwhCents", 0),
+      getAjuste("growattUsuario"),
+      getAjuste("growattMsg"),
+    ]);
+
+  const totalGen = genTot._sum.kwh ?? 0;
+  const totalCons = consTot._sum.kwh ?? 0;
   const bal = balanceEnergia({ generacionKwh: totalGen, consumoKwh: totalCons, precioKwhCents });
 
   // --- Ahorro solar del MES en curso ---
-  const ahora = new Date();
-  const mismoMes = (d: Date) =>
-    d.getFullYear() === ahora.getFullYear() && d.getMonth() === ahora.getMonth();
-  const genMes = generaciones.filter((g) => mismoMes(g.fecha)).reduce((a, g) => a + g.kwh, 0);
-  const consMes = consumos.filter((c) => mismoMes(c.fecha)).reduce((a, c) => a + c.kwh, 0);
+  const genMes = genMesAgg._sum.kwh ?? 0;
+  const consMes = consMesAgg._sum.kwh ?? 0;
   const balMes = balanceEnergia({ generacionKwh: genMes, consumoKwh: consMes, precioKwhCents });
   const nombreMes = ahora.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
 
-  // --- Serie diaria para la gráfica: generación vs consumo ---
+  // --- Serie diaria para la gráfica: generación vs consumo (sobre las filas recientes) ---
   const porDia = new Map<string, { gen: number; cons: number; fecha: Date }>();
   for (const g of generaciones) {
     const key = fechaParaInput(g.fecha);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { preguntar, type RespuestaAsistente } from "@/app/asistente/actions";
 
 type Turno = { pregunta: string; respuesta?: string; error?: string; cargando?: boolean };
@@ -16,6 +16,13 @@ export function AsistenteChat() {
   const [texto, setTexto] = useState("");
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [cargando, setCargando] = useState(false);
+  const finRef = useRef<HTMLDivElement>(null);
+
+  // Al llegar una pregunta o su respuesta, llevar la vista al final (en móvil el input está
+  // abajo y la respuesta aparecía sin que el usuario la viera).
+  useEffect(() => {
+    finRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [turnos]);
 
   async function enviar(preguntaTexto: string) {
     const q = preguntaTexto.trim();
@@ -54,7 +61,7 @@ export function AsistenteChat() {
       </div>
 
       {turnos.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3" aria-live="polite">
           {turnos.map((t, i) => (
             <div key={i} className="space-y-2">
               <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-sky-600 px-4 py-2 text-sm text-white">
@@ -67,6 +74,7 @@ export function AsistenteChat() {
               </div>
             </div>
           ))}
+          <div ref={finRef} />
         </div>
       )}
 

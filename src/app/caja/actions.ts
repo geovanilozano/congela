@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { repartirDetallado, mapearReglas } from "@/lib/finance/fondos";
+import { repartirDetallado, mapearReglas, ajustarReglaCredito } from "@/lib/finance/fondos";
 import { exigirRol } from "@/lib/auth/guard";
 import { auditar, conMonto } from "@/lib/auditoria";
 import { revalidatePath } from "next/cache";
@@ -30,14 +30,12 @@ export async function cerrarCaja() {
     // en cada cierre. Se limita su aporte a lo que le falta para llegar a la cuota (se le
     // descuenta lo que ya tiene apartado). Así, una vez reunida la cuota deja de apartar y
     // ese dinero pasa a la Utilidad; al pagar la cuota el fondo se vacía (ver registrarPago)
-    // y vuelve a apartar para la siguiente. Funciona con cierres diarios, semanales o mensuales.
+    // y vuelve a apartar para la siguiente. Mismo ajuste que el preview de /caja (no divergen).
     const fondoCredito = fondos.find((f) => f.nombre === "Crédito");
-    if (fondoCredito?.regla?.activo && fondoCredito.regla.tipo === "fijo") {
+    if (fondoCredito) {
       const saldo =
         (await tx.movimientoFondo.aggregate({ where: { fondoId: fondoCredito.id }, _sum: { montoCents: true } }))._sum.montoCents ?? 0;
-      const objetivo = fondoCredito.regla.valorCents ?? 0;
-      const regla = reglas.find((r) => r.fondo === "Crédito");
-      if (regla) regla.valorCents = Math.max(0, objetivo - saldo);
+      ajustarReglaCredito(reglas, saldo);
     }
 
     const { porFondo, sinAsignarCents } = repartirDetallado(totalCents, reglas);

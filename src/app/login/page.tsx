@@ -40,9 +40,9 @@ export default async function LoginPage({
                 </p>
               )}
               <form action={registrarPrimerUsuario} className="mt-4 space-y-3">
-                <Campo label="Tu nombre" name="nombre" type="text" placeholder="Ej: Geovani" />
-                <Campo label="Usuario" name="usuario" type="text" placeholder="Ej: geovani" />
-                <Campo label="Clave" name="clave" type="password" placeholder="Mínimo 4 caracteres" />
+                <Campo label="Tu nombre" name="nombre" type="text" placeholder="Ej: Geovani" autoComplete="name" />
+                <Campo label="Usuario" name="usuario" type="text" placeholder="Ej: geovani" autoComplete="username" />
+                <Campo label="Clave" name="clave" type="password" placeholder="Mínimo 4 caracteres" autoComplete="new-password" />
                 <BotonGuardar className="w-full rounded-lg bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-sky-700">
                   Crear usuario y entrar
                 </BotonGuardar>
@@ -58,8 +58,8 @@ export default async function LoginPage({
                 </p>
               )}
               <form action={iniciarSesion} className="mt-4 space-y-3">
-                <Campo label="Usuario" name="usuario" type="text" placeholder="Tu usuario" />
-                <Campo label="Clave" name="clave" type="password" placeholder="Tu clave" />
+                <Campo label="Usuario" name="usuario" type="text" placeholder="Tu usuario" autoComplete="username" />
+                <Campo label="Clave" name="clave" type="password" placeholder="Tu clave" autoComplete="current-password" />
                 <BotonGuardar className="w-full rounded-lg bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-sky-700">
                   Entrar
                 </BotonGuardar>
@@ -72,7 +72,19 @@ export default async function LoginPage({
   );
 }
 
-function Campo({ label, name, type, placeholder }: { label: string; name: string; type: string; placeholder?: string }) {
+function Campo({
+  label,
+  name,
+  type,
+  placeholder,
+  autoComplete,
+}: {
+  label: string;
+  name: string;
+  type: string;
+  placeholder?: string;
+  autoComplete?: string;
+}) {
   return (
     <label className="block text-sm">
       <span className="text-slate-600">{label}</span>
@@ -81,7 +93,9 @@ function Campo({ label, name, type, placeholder }: { label: string; name: string
         type={type}
         required
         placeholder={placeholder}
-        autoComplete="off"
+        // Permite que el navegador/gestor de contraseñas rellene y ofrezca guardar la clave
+        // en el celular (antes iba "off" y había que teclearla a mano en cada sesión).
+        autoComplete={autoComplete}
         className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
       />
     </label>

@@ -64,10 +64,10 @@ export function InstalarApp() {
       <div className="flex items-start gap-3">
         <span className="text-2xl">📲</span>
         <div className="min-w-0 flex-1 text-sm">
-          <div className="font-semibold text-slate-800">Instalá Congela en tu celular</div>
+          <div className="font-semibold text-slate-800">Instala Congela en tu celular</div>
           {esIOS ? (
             <p className="mt-0.5 text-xs text-slate-500">
-              Tocá <b>Compartir</b> ⬆️ abajo y luego <b>“Agregar a inicio”</b>. Así queda como una app.
+              Toca <b>Compartir</b> ⬆️ abajo y luego <b>“Agregar a inicio”</b>. Así queda como una app.
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-slate-500">Ábrela como app, a pantalla completa y con avisos.</p>

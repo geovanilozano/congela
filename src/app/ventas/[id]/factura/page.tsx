@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/finance/money";
 import { getAjuste } from "@/lib/ajustes";
+import { exigirLecturaPagina } from "@/lib/auth/guard";
 import { BotonImprimir } from "@/components/BotonImprimir";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ function fmtFecha(d: Date) {
 }
 
 export default async function FacturaPage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirLecturaPagina("/ventas"); // defensa en profundidad: datos de cliente/factura
   const { id } = await params;
   const [venta, negNombre, negNit, negDir, negTel] = await Promise.all([
     db.venta.findUnique({ where: { id: Number(id) }, include: { cliente: true, items: true } }),

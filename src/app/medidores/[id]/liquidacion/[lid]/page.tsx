@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
 import { liquidarMedidor } from "@/lib/finance/medidor";
 import { getAjuste } from "@/lib/ajustes";
+import { exigirLecturaPagina } from "@/lib/auth/guard";
 import { BotonImprimir } from "@/components/BotonImprimir";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ function fmtFecha(d: Date) {
 }
 
 export default async function FacturaMedidorPage({ params }: { params: Promise<{ id: string; lid: string }> }) {
+  await exigirLecturaPagina("/medidores"); // defensa en profundidad: liquidación/PII del cliente
   const { lid } = await params;
   const [liq, negNombre, negNit, negDir, negTel] = await Promise.all([
     db.liquidacionMedidor.findUnique({

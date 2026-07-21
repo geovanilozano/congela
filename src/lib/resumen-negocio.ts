@@ -14,7 +14,7 @@ export async function resumenNegocio(): Promise<string> {
   // calcular hoy / semana / mes con una sola consulta.
   const desdeVentas = inicioMes < hace7 ? inicioMes : hace7;
 
-  const [ventasRecientes, porCobrar, clientes, fondos, insumos, gastosMes, produccionMes] =
+  const [ventasRecientes, porCobrar, clientes, fondos, saldosPorFondo, insumos, gastosMes, produccionMes] =
     await Promise.all([
       db.venta.findMany({
         where: { fecha: { gte: desdeVentas } },
@@ -25,7 +25,10 @@ export async function resumenNegocio(): Promise<string> {
         select: { clienteId: true, totalCents: true },
       }),
       db.cliente.findMany({ select: { id: true, nombre: true } }),
-      db.fondo.findMany({ include: { movimientos: { select: { montoCents: true } } } }),
+      db.fondo.findMany({ select: { id: true, nombre: true } }),
+      // Saldo de cada fondo con un groupBy en la BD, en vez de traer TODOS sus movimientos
+      // (movimientoFondo es la tabla que más crece: una fila por fondo en cada cierre).
+      db.movimientoFondo.groupBy({ by: ["fondoId"], _sum: { montoCents: true } }),
       db.insumoInventario.findMany({ select: { nombre: true, stock: true, stockMinimo: true, unidad: true } }),
       db.compraGasto.findMany({ where: { fecha: { gte: inicioMes } }, select: { valorCents: true } }),
       db.produccion.findMany({ where: { fecha: { gte: inicioMes } }, select: { bolsas: true } }),
@@ -50,11 +53,9 @@ export async function resumenNegocio(): Promise<string> {
     .slice(0, 5)
     .map(([id, cents]) => `${nombrePorId.get(id) ?? "Cliente #" + id}: ${formatMoney(cents)}`);
 
-  // Saldos de fondos.
-  const saldosFondos = fondos.map((f) => {
-    const saldo = f.movimientos.reduce((a, m) => a + m.montoCents, 0);
-    return `${f.nombre}: ${formatMoney(saldo)}`;
-  });
+  // Saldos de fondos (desde el groupBy: saldo = suma de movimientos por fondoId).
+  const saldoDe = new Map(saldosPorFondo.map((g) => [g.fondoId, g._sum.montoCents ?? 0]));
+  const saldosFondos = fondos.map((f) => `${f.nombre}: ${formatMoney(saldoDe.get(f.id) ?? 0)}`);
 
   // Inventario bajo mínimo.
   const stockBajo = insumos

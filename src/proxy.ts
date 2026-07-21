@@ -39,7 +39,14 @@ export async function proxy(req: NextRequest) {
 // Se aplica a todo menos: /login, /offline (pantalla sin conexión del PWA, pública para
 // que el service worker la cachee sin sesión), /api/keepalive (ping del cron), archivos
 // internos de Next, /uploads, favicon, los íconos e ícono de iOS (públicos, los usa el
-// manifiesto PWA) y archivos con extensión (incluye /sw.js).
+// manifiesto PWA) y los estáticos por EXTENSIÓN CONOCIDA (incluye /sw.js y las imágenes).
+//
+// OJO (seguridad): la exclusión de estáticos DEBE anclar la extensión con `$` y una lista
+// concreta. Un `.*\\.` suelto excluía CUALQUIER ruta con un punto, así que `/clientes/5.0/
+// cuenta` (Number("5.0")===5) se saltaba el proxy y renderizaba datos sin sesión. Ver la
+// doc: node_modules/next/dist/docs/.../proxy.md usa el patrón `.*\\.png$`.
 export const config = {
-  matcher: ["/((?!login|offline|api/keepalive|api/cron|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.).*)"],
+  matcher: [
+    "/((?!login|offline|api/keepalive|api/cron|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|bmp|js|mjs|css|map|json|txt|xml|woff|woff2|ttf|otf|eot|mp4|webm|mp3|wav|pdf|csv|xlsx)$).*)",
+  ],
 };

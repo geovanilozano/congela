@@ -46,9 +46,15 @@ describe("ORDEN_RESTAURACION", () => {
     expect(claves.indexOf("credito")).toBeLessThan(claves.indexOf("cuotaAmortizacion"));
     // movimientoInventario depende de insumoInventario
     expect(claves.indexOf("insumoInventario")).toBeLessThan(claves.indexOf("movimientoInventario"));
+    // medidorCliente depende de cliente; liquidacionMedidor depende de medidorCliente
+    expect(claves.indexOf("cliente")).toBeLessThan(claves.indexOf("medidorCliente"));
+    expect(claves.indexOf("medidorCliente")).toBeLessThan(claves.indexOf("liquidacionMedidor"));
   });
 
-  it("incluye las 24 tablas del respaldo", () => {
-    expect(ORDEN_RESTAURACION.length).toBe(24);
+  it("incluye las 26 tablas del respaldo (con sub-medición)", () => {
+    expect(ORDEN_RESTAURACION.length).toBe(26);
+    const claves = ORDEN_RESTAURACION.map((t) => t.clave);
+    expect(claves).toContain("medidorCliente");
+    expect(claves).toContain("liquidacionMedidor");
   });
 });

@@ -104,6 +104,9 @@ export async function borrarDatosDemo() {
     await tx.pagoNomina.deleteMany();
     await tx.venta.deleteMany();
     await tx.cierreCaja.deleteMany();
+    // Sub-medición antes que cliente (la liquidación cuelga del medidor; el medidor del cliente).
+    await tx.liquidacionMedidor.deleteMany();
+    await tx.medidorCliente.deleteMany();
     await tx.cliente.deleteMany();
     await tx.inversion.deleteMany();
     await tx.credito.deleteMany();

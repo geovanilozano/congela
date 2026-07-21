@@ -53,6 +53,16 @@ export function fechaParaInput(fecha: Date | string | null | undefined): string 
   return `${d.getFullYear()}-${mes}-${dia}`;
 }
 
+/** Fecha y hora corta en español, para listados (caja, ventas): "13 jul, 08:30". */
+export function formatFechaHora(fecha: Date | string): string {
+  return new Date(fecha).toLocaleString("es-CO", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /** El último instante del día (23:59:59.999) en hora local. */
 function finDelDia(valor: string): Date | null {
   const p = partes(valor);

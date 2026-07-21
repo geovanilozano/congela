@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { repartir, repartirDetallado, ReglaFondo } from "../src/lib/finance/fondos";
+import { repartir, repartirDetallado, ajustarReglaCredito, ReglaFondo } from "../src/lib/finance/fondos";
 
 const reglas: ReglaFondo[] = [
   { fondo: "arriendo", tipo: "fijo", valorCents: 30_000, prioridad: 1, activo: true },
@@ -55,5 +55,37 @@ describe("repartirDetallado — el dinero nunca se pierde", () => {
 
     expect(sinAsignarCents).toBe(0);
     expect(repartido).toBe(100_000);
+  });
+});
+
+describe("ajustarReglaCredito (el fondo Crédito solo COMPLETA la próxima cuota)", () => {
+  const nuevas = (): ReglaFondo[] => [
+    { fondo: "arriendo", tipo: "fijo", valorCents: 30_000, prioridad: 1, activo: true },
+    { fondo: "Crédito", tipo: "fijo", valorCents: 50_000, prioridad: 2, activo: true },
+    { fondo: "utilidad", tipo: "resto", prioridad: 99, activo: true },
+  ];
+
+  it("descuenta lo ya apartado: solo aporta lo que falta para la cuota", () => {
+    const r = nuevas();
+    ajustarReglaCredito(r, 20_000); // ya hay 20k apartados de una cuota de 50k
+    expect(r.find((x) => x.fondo === "Crédito")!.valorCents).toBe(30_000);
+  });
+
+  it("si ya se reunió la cuota, no aparta más (0) y el excedente fluye a utilidad", () => {
+    const r = nuevas();
+    ajustarReglaCredito(r, 60_000); // saldo supera el objetivo
+    expect(r.find((x) => x.fondo === "Crédito")!.valorCents).toBe(0);
+  });
+
+  it("sin saldo apartado, el objetivo queda igual (la cuota entera)", () => {
+    const r = nuevas();
+    ajustarReglaCredito(r, 0);
+    expect(r.find((x) => x.fondo === "Crédito")!.valorCents).toBe(50_000);
+  });
+
+  it("no toca fondos que no sean Crédito", () => {
+    const r = nuevas();
+    ajustarReglaCredito(r, 10_000);
+    expect(r.find((x) => x.fondo === "arriendo")!.valorCents).toBe(30_000);
   });
 });

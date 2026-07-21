@@ -129,12 +129,12 @@ export function FormLiquidacion({
               <input {...numProps} name="consumoTotalKwh" value={f.consumoTotalKwh} onChange={set("consumoTotalKwh")} placeholder="0 = este medidor es el único" className={inputCls} />
             </label>
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
+          <p className="mt-2 text-xs text-slate-600">
             El subsidio solo aplica hasta el consumo de subsistencia (por eso a consumos altos no se
             descuenta todo). En Barrancabermeja el alumbrado es ~6% y la subsistencia ~173 kWh.
             <br />
-            <b>Varios medidores en un mismo recibo:</b> escribí el consumo TOTAL del recibo y el
-            subsidio (que es uno solo) se reparte entre ellos según lo que consumió cada uno. Dejalo
+            <b>Varios medidores en un mismo recibo:</b> escribe el consumo TOTAL del recibo y el
+            subsidio (que es uno solo) se reparte entre ellos según lo que consumió cada uno. Déjalo
             en 0 si este medidor es el único del recibo.
           </p>
         </div>
@@ -160,9 +160,9 @@ export function FormLiquidacion({
               <input {...numProps} name="aseoPct" value={f.aseoPct} onChange={set("aseoPct")} placeholder="50" className={inputCls} />
             </label>
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
-            Escribí el valor TOTAL del alumbrado del recibo ($31.272 ≈ 6% de la energía) y el % que
-            paga este cliente. Si son dos, poné 50% a cada uno; el resultado es lo que se le suma.
+          <p className="mt-2 text-xs text-slate-600">
+            Escribe el valor TOTAL del alumbrado del recibo ($31.272 ≈ 6% de la energía) y el % que
+            paga este cliente. Si son dos, pon 50% a cada uno; el resultado es lo que se le suma.
           </p>
         </div>
 

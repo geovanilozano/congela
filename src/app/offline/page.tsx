@@ -10,7 +10,7 @@ export default function OfflinePage() {
         <h1 className="mt-4 text-2xl font-bold text-slate-800">Sin conexión</h1>
         <p className="mt-2 text-sm text-slate-500">
           Congela necesita internet para mostrar tus datos en vivo (ventas, caja, medidores…).
-          Revisá tu conexión e intentá de nuevo.
+          Revisa tu conexión e intenta de nuevo.
         </p>
         <p className="mt-4 text-xs text-slate-400">La app ya está instalada; abrirá normal cuando vuelva la señal.</p>
       </div>

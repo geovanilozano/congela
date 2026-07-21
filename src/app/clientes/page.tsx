@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/finance/money";
-import { resumenClientes } from "@/lib/clientes";
+import { resumenClientesAgg } from "@/lib/clientes";
 import { registrarPagoCliente } from "../ventas/actions";
 import { crearCliente, actualizarCliente } from "./actions";
 import { BotonGuardar } from "@/components/BotonGuardar";
@@ -33,24 +33,26 @@ export default async function ClientesPage({
       }
     : undefined;
 
-  const [clientes, ventas, enEdicion] = await Promise.all([
+  // En vez de traer TODA la tabla de ventas, se piden agregados: total comprado por cliente
+  // (groupBy) y solo las ventas a crédito SIN pagar (lo único que se lista y se totaliza).
+  const [clientes, comprasPorCliente, pendientesTodas, enEdicion] = await Promise.all([
     db.cliente.findMany({ where: filtro, orderBy: { nombre: "asc" } }),
+    db.venta.groupBy({ by: ["clienteId"], _sum: { totalCents: true } }),
     db.venta.findMany({
-      select: { id: true, clienteId: true, totalCents: true, formaPago: true, pagada: true, fecha: true },
+      where: { formaPago: "credito", pagada: false },
+      select: { id: true, clienteId: true, totalCents: true, fecha: true },
       orderBy: { fecha: "desc" },
     }),
     editarId ? db.cliente.findUnique({ where: { id: editarId } }) : Promise.resolve(null),
   ]);
 
-  const resumen = resumenClientes(clientes, ventas);
+  const compras = comprasPorCliente.map((g) => ({ clienteId: g.clienteId, totalCents: g._sum.totalCents ?? 0 }));
+  const resumen = resumenClientesAgg(clientes, compras, pendientesTodas);
   // Total por cobrar de TODO el negocio (no depende del filtro de búsqueda).
-  const totalPorCobrar = ventas
-    .filter((v) => v.formaPago === "credito" && !v.pagada)
-    .reduce((a, v) => a + v.totalCents, 0);
+  const totalPorCobrar = pendientesTodas.reduce((a, v) => a + v.totalCents, 0);
 
   // Ventas a crédito no pagadas de cada cliente, para listarlas y poder marcarlas.
-  const pendientesDe = (clienteId: number) =>
-    ventas.filter((v) => v.clienteId === clienteId && v.formaPago === "credito" && !v.pagada);
+  const pendientesDe = (clienteId: number) => pendientesTodas.filter((v) => v.clienteId === clienteId);
 
   const inputCls = "mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5";
 

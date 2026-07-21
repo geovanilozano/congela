@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
-import { puedeAcceder } from "@/lib/auth/permisos";
+import { puedeAcceder, inicioDeRol } from "@/lib/auth/permisos";
 import { cerrarSesionAccion } from "@/app/login/actions";
 import { InstalarApp } from "@/components/InstalarApp";
 
@@ -234,7 +234,7 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
           className="no-print sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 pb-3 backdrop-blur lg:hidden"
           style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
         >
-          <Link href="/" className="flex items-center gap-2 font-display font-bold text-slate-800">
+          <Link href={inicioDeRol(rol)} className="flex items-center gap-2 font-display font-bold text-slate-800">
             <Image src="/logo.png" alt="Congela" width={26} height={26} className="h-[26px] w-[26px]" /> Congela
           </Link>
           <button
@@ -272,7 +272,10 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
       </div>
 
       {/* Barra de navegación inferior (solo móvil, modo app): los destinos más usados al
-          alcance del pulgar. El botón "Más" abre el menú completo. */}
+          alcance del pulgar. El botón "Más" abre el menú completo. Solo se muestra si el rol
+          tiene al menos 2 destinos propios (para un rol acotado como "medidores", con un único
+          destino, la barra quedaría casi vacía y el menú del encabezado ya alcanza). */}
+      {itemsInferior.length >= 2 && (
       <nav
         className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 pb-safe backdrop-blur lg:hidden"
       >
@@ -300,6 +303,7 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
           Más
         </button>
       </nav>
+      )}
 
       <InstalarApp />
     </div>
