@@ -45,9 +45,13 @@ export const ORDEN_RESTAURACION: { clave: string; modelo: string }[] = [
   { clave: "cuotaAmortizacion", modelo: "cuotaAmortizacion" },
   { clave: "pagoCredito", modelo: "pagoCredito" },
   { clave: "cliente", modelo: "cliente" },
+  // Producto antes de venta/ventaItem/producción (FK productoId) y de la receta.
+  { clave: "producto", modelo: "producto" },
   { clave: "venta", modelo: "venta" },
   { clave: "ventaItem", modelo: "ventaItem" },
   { clave: "insumoInventario", modelo: "insumoInventario" },
+  // Receta depende de producto e insumo (ambos ya insertados).
+  { clave: "recetaItem", modelo: "recetaItem" },
   { clave: "movimientoInventario", modelo: "movimientoInventario" },
   { clave: "empleado", modelo: "empleado" },
   { clave: "produccion", modelo: "produccion" },

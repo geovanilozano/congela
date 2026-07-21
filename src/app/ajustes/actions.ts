@@ -117,6 +117,8 @@ export async function borrarDatosDemo() {
     await tx.insumoInventario.deleteMany();
     await tx.compraGasto.deleteMany();
     await tx.arqueoCaja.deleteMany();
+    await tx.recetaItem.deleteMany();
+    await tx.producto.deleteMany();
     await tx.energiaGeneracion.deleteMany();
     await tx.medidorLectura.deleteMany();
     await tx.reciboServicio.deleteMany();

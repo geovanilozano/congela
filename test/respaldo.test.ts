@@ -55,13 +55,18 @@ describe("ORDEN_RESTAURACION", () => {
     expect(claves.indexOf("mantenimiento")).toBeLessThan(claves.indexOf("compraGasto"));
     // movimientoFondo depende de compraGasto (FK gastoId del débito)
     expect(claves.indexOf("compraGasto")).toBeLessThan(claves.indexOf("movimientoFondo"));
+    // producto antes de venta/ventaItem/producción; recetaItem tras producto e insumo
+    expect(claves.indexOf("producto")).toBeLessThan(claves.indexOf("ventaItem"));
+    expect(claves.indexOf("producto")).toBeLessThan(claves.indexOf("produccion"));
+    expect(claves.indexOf("producto")).toBeLessThan(claves.indexOf("recetaItem"));
+    expect(claves.indexOf("insumoInventario")).toBeLessThan(claves.indexOf("recetaItem"));
   });
 
-  it("incluye las 27 tablas del respaldo (con sub-medición y arqueo)", () => {
-    expect(ORDEN_RESTAURACION.length).toBe(27);
+  it("incluye las 29 tablas del respaldo (con productos y receta)", () => {
+    expect(ORDEN_RESTAURACION.length).toBe(29);
     const claves = ORDEN_RESTAURACION.map((t) => t.clave);
-    expect(claves).toContain("medidorCliente");
-    expect(claves).toContain("liquidacionMedidor");
+    expect(claves).toContain("producto");
+    expect(claves).toContain("recetaItem");
     expect(claves).toContain("arqueoCaja");
   });
 });

@@ -182,12 +182,17 @@ model VentaItem {
   id             Int    @id @default(autoincrement())
   ventaId        Int
   venta          Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  // Producto del catálogo (opcional): las ventas viejas de texto libre no lo tienen. Se
+  // conserva `descripcion` como copia del nombre por si el producto se renombra o borra.
+  productoId     Int?
+  producto       Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
   descripcion    String
   cantidad       Int
   precioUnitCents Int
   subtotalCents  Int
 
   @@index([ventaId])
+  @@index([productoId])
 }
 
 model CierreCaja {
@@ -311,12 +316,16 @@ model Produccion {
   activo     Activo?   @relation(fields: [activoId], references: [id])
   empleadoId Int?
   empleado   Empleado? @relation(fields: [empleadoId], references: [id])
+  // Producto producido (opcional): al producir se consumen sus insumos de receta y sube su stock.
+  productoId Int?
+  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
   nota       String?
   createdAt  DateTime  @default(now())
 
   @@index([fecha])
   @@index([activoId])
   @@index([empleadoId])
+  @@index([productoId])
 }
 
 model InsumoInventario {
@@ -326,7 +335,38 @@ model InsumoInventario {
   stock       Float                  @default(0)
   stockMinimo Float                  @default(0)
   movimientos MovimientoInventario[]
+  recetas     RecetaItem[]
   createdAt   DateTime               @default(now())
+}
+
+// Catálogo de PRODUCTOS que vende el negocio (p. ej. "Bolsa 5 kg"). El stock es de PRODUCTO
+// TERMINADO, materializado (como InsumoInventario): sube al producir y baja al vender.
+model Producto {
+  id                  Int          @id @default(autoincrement())
+  nombre              String       @unique
+  unidad              String       @default("bolsa")
+  precioSugeridoCents Int?
+  stock               Float        @default(0)
+  stockMinimo         Float        @default(0)
+  activo              Boolean      @default(true)
+  receta              RecetaItem[]
+  ventaItems          VentaItem[]
+  producciones        Produccion[]
+  createdAt           DateTime     @default(now())
+}
+
+// Receta (BOM): cuánto de cada insumo consume UNA unidad del producto (p. ej. 1 empaque).
+model RecetaItem {
+  id         Int              @id @default(autoincrement())
+  productoId Int
+  producto   Producto         @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  insumoId   Int
+  insumo     InsumoInventario @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  cantidad   Float // por unidad de producto
+
+  @@unique([productoId, insumoId])
+  @@index([productoId])
+  @@index([insumoId])
 }
 
 model MovimientoInventario {

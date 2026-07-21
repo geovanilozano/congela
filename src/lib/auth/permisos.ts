@@ -18,7 +18,7 @@ const PERMISOS: Record<string, string[] | "*"> = {
   // El cajero exporta ventas y gastos desde Reportes (el respaldo completo es solo del dueño:
   // eso lo comprueba la propia ruta /api/export).
   cajero: ["/", "/reportes", "/ventas", "/caja", "/compras", "/clientes", "/api/export", "/api/export-clientes", ...COMUNES],
-  operario: ["/", "/produccion", "/inventario", "/mantenimiento", ...COMUNES],
+  operario: ["/", "/produccion", "/inventario", "/productos", "/mantenimiento", ...COMUNES],
   // Rol acotado: SOLO el módulo de medidores (facturación de energía a clientes). No ve el
   // tablero ni las finanzas; arranca directo en /medidores (ver inicioDeRol).
   medidores: ["/medidores", ...COMUNES],

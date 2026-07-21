@@ -59,6 +59,7 @@ const grupos: Grupo[] = [
     titulo: "Operación",
     items: [
       { href: "/produccion", label: "Producción", icon: "🏭" },
+      { href: "/productos", label: "Productos", icon: "🏷️" },
       { href: "/inventario", label: "Inventario", icon: "📦" },
       { href: "/activos", label: "Activos", icon: "🧰" },
       { href: "/personal", label: "Personal", icon: "👷" },

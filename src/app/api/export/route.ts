@@ -66,7 +66,8 @@ export async function GET(request: Request) {
       inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
       cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
       produccion, activo, empleado, asistencia, pagoNomina, mantenimiento,
-      energiaGeneracion, medidorLectura, reciboServicio, medidorCliente, liquidacionMedidor, arqueoCaja, ajusteTodos,
+      energiaGeneracion, medidorLectura, reciboServicio, medidorCliente, liquidacionMedidor, arqueoCaja,
+      producto, recetaItem, ajusteTodos,
     ] = await Promise.all([
       db.inversion.findMany(), db.credito.findMany(), db.cuotaAmortizacion.findMany(),
       db.pagoCredito.findMany(), db.fondo.findMany(), db.reglaReparto.findMany(),
@@ -78,7 +79,8 @@ export async function GET(request: Request) {
       db.medidorLectura.findMany(), db.reciboServicio.findMany(),
       // Sub-medición: medidores instalados a clientes y sus liquidaciones (dinero por cobrar).
       db.medidorCliente.findMany(), db.liquidacionMedidor.findMany(),
-      db.arqueoCaja.findMany(), db.ajuste.findMany(),
+      db.arqueoCaja.findMany(),
+      db.producto.findMany(), db.recetaItem.findMany(), db.ajuste.findMany(),
     ]);
     // El respaldo NO debe llevar secretos (clave de Growatt, API key), aunque estén
     // cifrados: un archivo de respaldo se comparte y se guarda en cualquier lado.
@@ -88,7 +90,8 @@ export async function GET(request: Request) {
       inversion, credito, cuotaAmortizacion, pagoCredito, fondo, reglaReparto, movimientoFondo,
       cliente, venta, ventaItem, cierreCaja, compraGasto, insumoInventario, movimientoInventario,
       produccion, activo, empleado, asistencia, pagoNomina, mantenimiento,
-      energiaGeneracion, medidorLectura, reciboServicio, medidorCliente, liquidacionMedidor, arqueoCaja, ajuste,
+      energiaGeneracion, medidorLectura, reciboServicio, medidorCliente, liquidacionMedidor, arqueoCaja,
+      producto, recetaItem, ajuste,
     };
     return new Response(JSON.stringify(respaldo, null, 2), {
       headers: {
