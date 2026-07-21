@@ -36,9 +36,10 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next({ request: { headers } });
 }
 
-// Se aplica a todo menos: /login, /api/keepalive (ping del cron, sin sesión),
-// archivos internos de Next, /uploads, favicon, los íconos e ícono de iOS (públicos,
-// los usa el manifiesto PWA) y archivos con extensión.
+// Se aplica a todo menos: /login, /offline (pantalla sin conexión del PWA, pública para
+// que el service worker la cachee sin sesión), /api/keepalive (ping del cron), archivos
+// internos de Next, /uploads, favicon, los íconos e ícono de iOS (públicos, los usa el
+// manifiesto PWA) y archivos con extensión (incluye /sw.js).
 export const config = {
-  matcher: ["/((?!login|api/keepalive|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.).*)"],
+  matcher: ["/((?!login|offline|api/keepalive|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.).*)"],
 };

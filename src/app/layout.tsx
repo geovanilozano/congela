@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { RegistrarSW } from "@/components/RegistrarSW";
 import { getSesion } from "@/lib/auth/session";
 import { puedeAcceder } from "@/lib/auth/permisos";
 
@@ -52,6 +53,7 @@ export default async function RootLayout({
   return (
     <html lang="es" className={`h-full antialiased ${display.variable} ${body.variable}`}>
       <body className="min-h-full">
+        <RegistrarSW />
         {sesion ? (
           <AppShell rol={sesion.rol} nombre={sesion.nombre}>
             {children}
