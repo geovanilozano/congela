@@ -59,3 +59,40 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fetch(req).catch(() => caches.match("/offline")));
   }
 });
+
+// --- Notificaciones push ----------------------------------------------------
+self.addEventListener("push", (event) => {
+  let datos = { title: "Congela", body: "", url: "/" };
+  try {
+    if (event.data) datos = { ...datos, ...event.data.json() };
+  } catch {
+    // payload no-JSON: se usa el texto plano como cuerpo.
+    if (event.data) datos.body = event.data.text();
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.title, {
+      body: datos.body,
+      icon: "/icon",
+      badge: "/icon",
+      lang: "es-CO",
+      data: { url: datos.url || "/" },
+    }),
+  );
+});
+
+// Al tocar la notificación: enfocar la app (o abrirla) en la ruta indicada.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const destino = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+      for (const w of ventanas) {
+        if ("focus" in w) {
+          if ("navigate" in w) w.navigate(destino);
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(destino);
+    }),
+  );
+});

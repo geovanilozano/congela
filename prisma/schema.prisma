@@ -443,3 +443,12 @@ model LiquidacionMedidor {
 
   @@index([medidorId])
 }
+
+// Suscripción de un dispositivo a las notificaciones push (Web Push / VAPID).
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}

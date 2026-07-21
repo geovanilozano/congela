@@ -41,5 +41,5 @@ export async function proxy(req: NextRequest) {
 // internos de Next, /uploads, favicon, los íconos e ícono de iOS (públicos, los usa el
 // manifiesto PWA) y archivos con extensión (incluye /sw.js).
 export const config = {
-  matcher: ["/((?!login|offline|api/keepalive|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.).*)"],
+  matcher: ["/((?!login|offline|api/keepalive|api/cron|_next|uploads|favicon.ico|icon|apple-icon|manifest.webmanifest|.*\\.).*)"],
 };
