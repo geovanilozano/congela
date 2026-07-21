@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { db } from "@/lib/db";
 import { getSesion } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -21,7 +22,7 @@ export default async function LoginPage({
     <div className="grid min-h-screen place-items-center bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/10 text-3xl">🧊</div>
+          <Image src="/logo.png" alt="Congela" width={72} height={72} priority className="mx-auto drop-shadow-lg" />
           <h1 className="mt-3 font-display text-2xl font-bold text-white">Congela</h1>
           <p className="text-sm text-slate-400">Control del negocio de hielo</p>
         </div>

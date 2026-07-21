@@ -17,16 +17,16 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es-CO",
     categories: ["business", "finance", "productivity"],
     icons: [
-      { src: "/icon", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icon", sizes: "512x512", type: "image/png", purpose: "any" },
-      // Maskable con "zona segura" (glifo dentro del 80% central) para Android adaptativo.
-      { src: "/icon-maskable", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Maskable con "zona segura" (cubo dentro del 80% central) para Android adaptativo.
+      { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     // Accesos directos: mantener pulsado el ícono en la pantalla de inicio (Android).
     shortcuts: [
-      { name: "Nueva venta", short_name: "Venta", url: "/ventas", icons: [{ src: "/icon", sizes: "192x192" }] },
-      { name: "Cerrar caja", short_name: "Caja", url: "/caja", icons: [{ src: "/icon", sizes: "192x192" }] },
-      { name: "Medidores", short_name: "Medidores", url: "/medidores", icons: [{ src: "/icon", sizes: "192x192" }] },
+      { name: "Nueva venta", short_name: "Venta", url: "/ventas", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Cerrar caja", short_name: "Caja", url: "/caja", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Medidores", short_name: "Medidores", url: "/medidores", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

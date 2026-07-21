@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
@@ -134,9 +135,8 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
       >
         {/* Marca */}
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-50 text-xl ring-1 ring-sky-100">
-            🧊
-          </span>
+          <Image src="/logo.png" alt="Congela" width={40} height={40} className="h-10 w-10 shrink-0" priority />
+
           <div className="min-w-0 flex-1">
             <div className="font-display text-lg font-bold leading-none text-slate-800">Congela</div>
             <div className="mt-1 truncate text-[11px] text-slate-400">Control del negocio</div>
@@ -235,7 +235,7 @@ export function AppShell({ children, rol, nombre }: { children: React.ReactNode;
           style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
         >
           <Link href="/" className="flex items-center gap-2 font-display font-bold text-slate-800">
-            <span>🧊</span> Congela
+            <Image src="/logo.png" alt="Congela" width={26} height={26} className="h-[26px] w-[26px]" /> Congela
           </Link>
           <button
             onClick={() => setAbierto(true)}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -38,7 +39,7 @@ export default async function FacturaPage({ params }: { params: Promise<{ id: st
         <div className="flex items-start justify-between border-b border-slate-200 pb-5">
           <div>
             <div className="flex items-center gap-2 font-display text-2xl font-bold text-slate-800">
-              <span>🧊</span> {nombreNegocio}
+              <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8" priority /> {nombreNegocio}
             </div>
             <div className="text-sm text-slate-500">Producción y venta de hielo</div>
             {(negNit || negDir || negTel) && (
