@@ -25,7 +25,7 @@ export default async function Home() {
   // Las sumas se piden a la base con aggregate/groupBy en vez de traer tablas enteras solo
   // para sumarlas en JS: gastos, energía y movimientos de fondos crecen a diario y esto es
   // el tablero (se carga en cada visita).
-  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, ventasTotalAgg, energiaAgg, insumos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
+  const [invAgg, creditos, cierres, fondos, saldosFondo, genAgg, consAgg, precioKwhCents, gastoAgg, ventasTotalAgg, energiaAgg, insumos, productos, mantenimientos, ventasPendientes, fiadoPorCobrar, ventasRecientes] = await Promise.all([
     db.inversion.aggregate({ _sum: { valorCents: true }, _count: true }),
     db.credito.findMany({ include: { cuotas: true } }),
     db.cierreCaja.findMany({ orderBy: { id: "asc" } }),
@@ -38,6 +38,7 @@ export default async function Home() {
     db.venta.aggregate({ _sum: { totalCents: true } }), // ingresos de TODAS las ventas (histórico)
     db.movimientoFondo.aggregate({ where: { fondo: { nombre: FONDO_INGRESO_ENERGIA } }, _sum: { montoCents: true } }), // cobro de energía a inquilinos
     db.insumoInventario.findMany(),
+    db.producto.findMany({ where: { activo: true }, select: { nombre: true, stock: true, stockMinimo: true } }),
     db.mantenimiento.findMany(),
     db.venta.findMany({ where: { cierreId: null }, select: { totalCents: true } }),
     db.venta.findMany({ where: { formaPago: "credito", pagada: false }, select: { clienteId: true, totalCents: true } }),
@@ -116,6 +117,9 @@ export default async function Home() {
   const cuotasVencidas = todasCuotas.filter((q) => estadoCuota(q, hoy) === "vencida");
   const cuotasProximas = todasCuotas.filter((q) => estadoCuota(q, hoy) === "proxima");
   const insumosBajos = bajoStock(insumos);
+  // Producto vendido de más (stock negativo) vs producto con stock bajo (0..mínimo).
+  const productosNegativos = productos.filter((p) => p.stock < 0);
+  const productosBajos = productos.filter((p) => p.stock >= 0 && p.stockMinimo > 0 && p.stock <= p.stockMinimo);
   const mantVencidos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "vencido").length;
   const mantProximos = mantenimientos.filter((m) => estadoMantenimiento(m, hoy) === "proximo").length;
 
@@ -147,6 +151,8 @@ export default async function Home() {
   if (pendientesCents > 0) alertas.push({ nivel: "media", texto: `Tienes ${formatMoney(pendientesCents)} en ventas sin cerrar — recuerda cerrar la caja`, href: "/caja" });
   if (totalFiadoCents > 0) alertas.push({ nivel: "media", texto: `Te deben ${formatMoney(totalFiadoCents)} en fiado${clientesQueDeben > 0 ? ` (${clientesQueDeben} cliente(s))` : ""} — recuérdales por WhatsApp`, href: "/clientes" });
   if (insumosBajos.length > 0) alertas.push({ nivel: "media", texto: `${insumosBajos.length} insumo(s) con bajo stock: ${insumosBajos.map((i) => i.nombre).join(", ")}`, href: "/inventario" });
+  if (productosNegativos.length > 0) alertas.push({ nivel: "alta", texto: `Vendiste más de lo producido de: ${productosNegativos.map((p) => p.nombre).join(", ")}`, href: "/productos" });
+  if (productosBajos.length > 0) alertas.push({ nivel: "media", texto: `${productosBajos.length} producto(s) con stock bajo: ${productosBajos.map((p) => p.nombre).join(", ")}`, href: "/productos" });
   if (mantProximos > 0) alertas.push({ nivel: "media", texto: `${mantProximos} mantenimiento(s) próximo(s)`, href: "/mantenimiento" });
 
   return (

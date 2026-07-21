@@ -18,13 +18,14 @@ export default async function VentasPage({
   const sp = await searchParams;
   const editarId = sp.editar ? Number(sp.editar) : null;
 
-  const [ventas, clientesLista, enEdicion] = await Promise.all([
+  const [ventas, clientesLista, productos, enEdicion] = await Promise.all([
     db.venta.findMany({
       where: { cierreId: null, fecha: rangoFechas(sp) },
       include: { cliente: true, items: true },
       orderBy: { id: "desc" },
     }),
     db.cliente.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
+    db.producto.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
     editarId
       ? db.venta.findUnique({ where: { id: editarId }, include: { cliente: true, items: true } })
       : Promise.resolve(null),
@@ -85,8 +86,26 @@ export default async function VentasPage({
         </label>
         <label className="text-sm">
           <span className="text-slate-500">Producto</span>
-          <input name="descripcion" defaultValue={item?.descripcion ?? "Bolsa de hielo"} className={inputCls} />
+          {productos.length > 0 ? (
+            <select name="productoId" defaultValue={item?.productoId ?? ""} className={inputCls}>
+              <option value="">— otro (escribir abajo) —</option>
+              {productos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                  {p.stock <= 0 ? " · sin stock" : ` · ${p.stock} ${p.unidad}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input name="descripcion" defaultValue={item?.descripcion ?? "Bolsa de hielo"} className={inputCls} />
+          )}
         </label>
+        {productos.length > 0 && (
+          <label className="text-sm">
+            <span className="text-slate-500">Descripción (si es «otro»)</span>
+            <input name="descripcion" defaultValue={item?.productoId ? "" : item?.descripcion ?? ""} placeholder="Bolsa de hielo" className={inputCls} />
+          </label>
+        )}
         <label className="text-sm">
           <span className="text-slate-500">Cantidad</span>
           <input name="cantidad" type="number" min="1" defaultValue={item?.cantidad ?? 1} className={inputCls} />
