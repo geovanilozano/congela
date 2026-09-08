@@ -1,11 +1,11 @@
 name: CI
 
-# Puerta de calidad: corre en cada push a master y en cada Pull Request.
+# Puerta de calidad: corre en cada push a main y en cada Pull Request.
 # Los tests ya existen (Vitest) pero antes no se ejecutaban solos; esto garantiza que
 # un cambio que rompa tipos, lint o la lógica financiera se detecte ANTES de desplegar.
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 # Si se empuja varias veces seguidas, cancela las corridas viejas del mismo ref.
